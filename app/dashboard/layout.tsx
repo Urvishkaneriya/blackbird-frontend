@@ -1,0 +1,49 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { useAuth } from '@/app/context/AuthContext';
+import { ProtectedRoute } from '@/app/components/ProtectedRoute';
+import { DashboardLayout, type NavItem } from '@/app/components/DashboardLayout';
+import { LayoutDashboard, Users, Building2, CalendarCheck, UserCircle } from 'lucide-react';
+
+const iconClass = 'size-5 shrink-0';
+
+const ADMIN_NAV: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className={iconClass} /> },
+  { label: 'Staff', href: '/dashboard/staff', icon: <Users className={iconClass} /> },
+  { label: 'Branches', href: '/dashboard/branches', icon: <Building2 className={iconClass} /> },
+  { label: 'Bookings', href: '/dashboard/bookings', icon: <CalendarCheck className={iconClass} /> },
+  { label: 'Customers', href: '/dashboard/customers', icon: <UserCircle className={iconClass} /> },
+];
+
+const STAFF_NAV: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className={iconClass} /> },
+  { label: 'Bookings', href: '/dashboard/bookings', icon: <CalendarCheck className={iconClass} /> },
+];
+
+const TITLES: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/dashboard/staff': 'Staff',
+  '/dashboard/branches': 'Branches',
+  '/dashboard/bookings': 'Bookings',
+  '/dashboard/customers': 'Customers',
+};
+
+export default function DashboardRootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { user } = useAuth();
+  const pathname = usePathname();
+  const pageTitle = TITLES[pathname ?? ''] ?? 'Dashboard';
+  const navItems = user?.role === 'admin' ? ADMIN_NAV : STAFF_NAV;
+
+  return (
+    <ProtectedRoute>
+      <DashboardLayout navItems={navItems} pageTitle={pageTitle}>
+        {children}
+      </DashboardLayout>
+    </ProtectedRoute>
+  );
+}
