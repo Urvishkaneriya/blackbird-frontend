@@ -1,5 +1,10 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+/**
+ * API client aligned with Postman collection: backend/postman/blackbird-tattoo.postman_collection.json
+ * All endpoints (Auth, Dashboard, Bookings, Branches, Employees, Users, Health) are implemented per that spec.
+ */
+
 export interface ApiResponse<T = unknown> {
   message: string;
   data: T | null;
@@ -65,6 +70,57 @@ export interface Booking {
   date?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** Dashboard API response (admin) */
+export interface DashboardData {
+  dateRange: { startDate: string; endDate: string };
+  summary: {
+    totalBookings: number;
+    totalRevenue: number;
+    uniqueCustomersInRange: number;
+    averageOrderValue: number;
+  };
+  byBranch: Array<{
+    branchId: string;
+    branchName: string;
+    branchNumber: string;
+    employeeCount: number;
+    bookingCount: number;
+    revenue: number;
+  }>;
+  byPaymentMethod: Array<{
+    paymentMethod: string;
+    count: number;
+    totalAmount: number;
+  }>;
+  totals?: {
+    totalBranches: number;
+    totalEmployees: number;
+    totalCustomers: number;
+  };
+}
+
+/** Dashboard API response (employee – branch scoped) */
+export interface BranchDashboardData {
+  dateRange: { startDate: string; endDate: string };
+  branchInfo: {
+    branchId: string;
+    branchName: string;
+    branchNumber: string;
+    employeeCount: number;
+  };
+  summary: {
+    totalBookings: number;
+    totalRevenue: number;
+    uniqueCustomersInRange: number;
+    averageOrderValue: number;
+  };
+  byPaymentMethod: Array<{
+    paymentMethod: string;
+    count: number;
+    totalAmount: number;
+  }>;
 }
 
 class ApiClient {
@@ -256,6 +312,56 @@ class ApiClient {
       { method: 'GET' }
     );
     return data?.users ?? [];
+  }
+
+  /**
+   * Dashboard data for date range.
+   * GET /api/dashboard?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+   * Admin: full dashboard (summary, byBranch, byPaymentMethod, totals).
+   * Employee: branch dashboard (branchInfo, summary, byPaymentMethod).
+   * Response: { message, data } per Postman.
+   */
+  async getDashboard(startDate: string, endDate: string): Promise<DashboardData | BranchDashboardData> {
+    const params = new URLSearchParams({ startDate, endDate });
+    const response = await this.request<DashboardData | BranchDashboardData>(
+      `/api/dashboard?${params.toString()}`,
+      { method: 'GET' }
+    );
+    const data = response.data;
+    if (!data || typeof data !== 'object') {
+      throw new Error(response.message || 'No dashboard data');
+    }
+    const raw = data as unknown as Record<string, unknown>;
+    const normalized = { ...raw } as unknown as DashboardData | BranchDashboardData;
+    if (Array.isArray(raw.byPaymentMethod)) {
+      normalized.byPaymentMethod = raw.byPaymentMethod as DashboardData['byPaymentMethod'];
+    } else {
+      (normalized as DashboardData).byPaymentMethod = [];
+    }
+    if ('byBranch' in raw && Array.isArray(raw.byBranch)) {
+      (normalized as DashboardData).byBranch = (raw.byBranch as Array<Record<string, unknown>>).map((b) => ({
+        branchId: typeof b.branchId === 'object' && b.branchId && '_id' in (b.branchId as object)
+          ? String((b.branchId as { _id: string })._id)
+          : String(b.branchId ?? ''),
+        branchName: String(b.branchName ?? 'N/A'),
+        branchNumber: String(b.branchNumber ?? ''),
+        employeeCount: Number(b.employeeCount ?? 0),
+        bookingCount: Number(b.bookingCount ?? 0),
+        revenue: Number(b.revenue ?? 0),
+      }));
+    } else if ('byBranch' in normalized) {
+      (normalized as DashboardData).byBranch = [];
+    }
+    if (raw.summary && typeof raw.summary === 'object') {
+      const s = raw.summary as Record<string, unknown>;
+      normalized.summary = {
+        totalBookings: Number(s.totalBookings ?? 0),
+        totalRevenue: Number(s.totalRevenue ?? 0),
+        uniqueCustomersInRange: Number(s.uniqueCustomersInRange ?? s.uniqueCustomersCount ?? 0),
+        averageOrderValue: Number(s.averageOrderValue ?? 0),
+      };
+    }
+    return normalized;
   }
 }
 
