@@ -22,8 +22,6 @@ interface DashboardLayoutProps {
   breadcrumbs?: Array<{ label: string; href?: string }>;
 }
 
-const SIDEBAR_WIDTH = 260;
-
 export function DashboardLayout({ children, navItems, pageTitle }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
@@ -64,14 +62,13 @@ export function DashboardLayout({ children, navItems, pageTitle }: DashboardLayo
         }`}
       />
 
-      {/* Side drawer */}
+      {/* Side drawer – always expanded on desktop, no collapse toggle */}
       <aside
-        className={`fixed md:relative inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border
-          transition-[transform,width] duration-200 ease-out
+        className={`fixed md:relative inset-y-0 left-0 z-50 flex flex-col w-64 bg-sidebar border-r border-sidebar-border
+          transition-transform duration-200 ease-out
           md:translate-x-0 md:shrink-0
           ${drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
-        style={{ width: SIDEBAR_WIDTH }}
       >
         <div className="flex h-14 md:h-16 items-center justify-between border-b border-sidebar-border px-4 shrink-0">
           <Link href="/dashboard" className="flex items-center min-w-0" onClick={closeDrawer}>

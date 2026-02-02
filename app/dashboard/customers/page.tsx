@@ -4,13 +4,19 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiClient, type UserCustomer } from '@/app/lib/api';
+import { Button } from '@/components/ui/button';
+import { apiClient, type UserCustomer, type Branch } from '@/app/lib/api';
 import { UserCircle } from 'lucide-react';
 
 export default function CustomersPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<UserCustomer[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [branchFilter, setBranchFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +33,17 @@ export default function CustomersPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const list = await apiClient.getUsers();
-        setUsers(list);
+        const [userRes, branchList] = await Promise.all([
+          apiClient.getUsers({
+            branchId: branchFilter || undefined,
+            page,
+            limit,
+          }),
+          apiClient.getBranches(),
+        ]);
+        setUsers(userRes.users ?? []);
+        setTotal(userRes.total ?? 0);
+        setBranches(branchList);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
@@ -36,7 +51,7 @@ export default function CustomersPage() {
       }
     };
     load();
-  }, [user?.role]);
+  }, [user?.role, branchFilter, page, limit]);
 
   return (
     <div className="space-y-6">
@@ -53,7 +68,7 @@ export default function CustomersPage() {
             <UserCircle className="size-6 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{users.length}</div>
+            <div className="text-2xl font-bold text-primary">{total}</div>
             <p className="text-xs text-muted-foreground">From bookings</p>
           </CardContent>
         </Card>
@@ -61,7 +76,22 @@ export default function CustomersPage() {
 
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-foreground">Customers</CardTitle>
+          <div className="flex flex-col gap-3">
+            <CardTitle className="text-foreground">Customers</CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm text-muted-foreground">Branch</label>
+              <select
+                value={branchFilter}
+                onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
+                className="h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+              >
+                <option value="">All branches</option>
+                {branches.map((b) => (
+                  <option key={b._id} value={b._id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -95,6 +125,33 @@ export default function CustomersPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {!isLoading && total > limit && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                Page {page} of {Math.ceil(total / limit)} ({total} total)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="border-border text-foreground"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= Math.ceil(total / limit)}
+                  className="border-border text-foreground"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

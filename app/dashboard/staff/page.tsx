@@ -14,6 +14,10 @@ export default function StaffPage() {
   const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [branchFilter, setBranchFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -39,11 +43,16 @@ export default function StaffPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const [empList, branchList] = await Promise.all([
-          apiClient.getEmployees(),
+        const [empRes, branchList] = await Promise.all([
+          apiClient.getEmployees({
+            branchId: branchFilter || undefined,
+            page,
+            limit,
+          }),
           apiClient.getBranches(),
         ]);
-        setEmployees(empList);
+        setEmployees(empRes.employees ?? []);
+        setTotal(empRes.total ?? 0);
         setBranches(branchList);
         if (branchList.length > 0) {
           setFormData((f) => (f.branchId ? f : { ...f, branchId: branchList[0]._id }));
@@ -55,7 +64,7 @@ export default function StaffPage() {
       }
     };
     load();
-  }, [user?.role]);
+  }, [user?.role, branchFilter, page, limit]);
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +113,7 @@ export default function StaffPage() {
             <Users className="size-6 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{employees.length}</div>
+            <div className="text-2xl font-bold text-primary">{total}</div>
             <p className="text-xs text-muted-foreground">Registered staff</p>
           </CardContent>
         </Card>
@@ -207,15 +216,30 @@ export default function StaffPage() {
 
       <Card className="bg-card border-border">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="text-foreground">All Employees</CardTitle>
-            <Button
-              onClick={() => { setShowForm(!showForm); setError(null); }}
-              disabled={isLoading}
-              className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {showForm ? 'Cancel' : '+ Add Employee'}
-            </Button>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="text-foreground">All Employees</CardTitle>
+              <Button
+                onClick={() => { setShowForm(!showForm); setError(null); }}
+                disabled={isLoading}
+                className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {showForm ? 'Cancel' : '+ Add Employee'}
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-sm text-muted-foreground">Branch</label>
+              <select
+                value={branchFilter}
+                onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
+                className="h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+              >
+                <option value="">All branches</option>
+                {branches.map((b) => (
+                  <option key={b._id} value={b._id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -261,6 +285,33 @@ export default function StaffPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {!isLoading && total > limit && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                Page {page} of {Math.ceil(total / limit)} ({total} total)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="border-border text-foreground"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= Math.ceil(total / limit)}
+                  className="border-border text-foreground"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

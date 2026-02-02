@@ -68,8 +68,31 @@ export interface Booking {
   userId?: string | UserCustomer;
   employeeId?: string;
   date?: string;
+  reminderSentAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** Settings (admin only) – single doc in DB */
+export interface Settings {
+  _id: string;
+  whatsappEnabled: boolean;
+  reminderEnabled: boolean;
+  reminderTimeDays: number;
+  selfInvoiceMessageEnabled: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Paginated list response shape (bookings, employees, users) */
+export interface PaginatedResponse<T> {
+  count: number;
+  total: number;
+  page: number;
+  limit: number;
+  bookings?: T[];
+  employees?: T[];
+  users?: T[];
 }
 
 /** Dashboard API response (admin) */
@@ -229,12 +252,24 @@ class ApiClient {
     return data;
   }
 
-  async getEmployees(): Promise<Employee[]> {
-    const { data } = await this.request<{ count: number; employees: Employee[] }>(
-      '/api/employees',
+  async getEmployees(params?: { branchId?: string; page?: number; limit?: number }): Promise<PaginatedResponse<Employee>> {
+    const search = new URLSearchParams();
+    if (params?.branchId) search.set('branchId', params.branchId);
+    if (params?.page != null) search.set('page', String(params.page));
+    if (params?.limit != null) search.set('limit', String(params.limit));
+    const q = search.toString();
+    const { data } = await this.request<{ count: number; total: number; page: number; limit: number; employees: Employee[] }>(
+      `/api/employees${q ? `?${q}` : ''}`,
       { method: 'GET' }
     );
-    return data?.employees ?? [];
+    if (!data) return { count: 0, total: 0, page: 1, limit: 10, employees: [] };
+    return {
+      count: data.count ?? data.employees?.length ?? 0,
+      total: data.total ?? data.employees?.length ?? 0,
+      page: data.page ?? 1,
+      limit: data.limit ?? 10,
+      employees: data.employees ?? [],
+    };
   }
 
   async getEmployee(id: string) {
@@ -281,12 +316,32 @@ class ApiClient {
     return data?.employees ?? [];
   }
 
-  async getBookings(): Promise<Booking[]> {
-    const { data } = await this.request<{ count: number; bookings: Booking[] }>(
-      '/api/bookings',
+  async getBookings(params?: {
+    branchId?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<Booking>> {
+    const search = new URLSearchParams();
+    if (params?.branchId) search.set('branchId', params.branchId);
+    if (params?.startDate) search.set('startDate', params.startDate);
+    if (params?.endDate) search.set('endDate', params.endDate);
+    if (params?.page != null) search.set('page', String(params.page));
+    if (params?.limit != null) search.set('limit', String(params.limit));
+    const q = search.toString();
+    const { data } = await this.request<{ count: number; total: number; page: number; limit: number; bookings: Booking[] }>(
+      `/api/bookings${q ? `?${q}` : ''}`,
       { method: 'GET' }
     );
-    return data?.bookings ?? [];
+    if (!data) return { count: 0, total: 0, page: 1, limit: 10, bookings: [] };
+    return {
+      count: data.count ?? data.bookings?.length ?? 0,
+      total: data.total ?? data.bookings?.length ?? 0,
+      page: data.page ?? 1,
+      limit: data.limit ?? 10,
+      bookings: data.bookings ?? [],
+    };
   }
 
   async createBooking(payload: {
@@ -306,12 +361,38 @@ class ApiClient {
     return data;
   }
 
-  async getUsers(): Promise<UserCustomer[]> {
-    const { data } = await this.request<{ count: number; users: UserCustomer[] }>(
-      '/api/users',
+  async getUsers(params?: { branchId?: string; page?: number; limit?: number }): Promise<PaginatedResponse<UserCustomer>> {
+    const search = new URLSearchParams();
+    if (params?.branchId) search.set('branchId', params.branchId);
+    if (params?.page != null) search.set('page', String(params.page));
+    if (params?.limit != null) search.set('limit', String(params.limit));
+    const q = search.toString();
+    const { data } = await this.request<{ count: number; total: number; page: number; limit: number; users: UserCustomer[] }>(
+      `/api/users${q ? `?${q}` : ''}`,
       { method: 'GET' }
     );
-    return data?.users ?? [];
+    if (!data) return { count: 0, total: 0, page: 1, limit: 10, users: [] };
+    return {
+      count: data.count ?? data.users?.length ?? 0,
+      total: data.total ?? data.users?.length ?? 0,
+      page: data.page ?? 1,
+      limit: data.limit ?? 10,
+      users: data.users ?? [],
+    };
+  }
+
+  /** Settings (admin only) */
+  async getSettings(): Promise<Settings | null> {
+    const { data } = await this.request<Settings>('/api/settings', { method: 'GET' });
+    return data ?? null;
+  }
+
+  async updateSettings(payload: Partial<Pick<Settings, 'whatsappEnabled' | 'reminderEnabled' | 'reminderTimeDays' | 'selfInvoiceMessageEnabled'>>): Promise<Settings | null> {
+    const { data } = await this.request<Settings>('/api/settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return data ?? null;
   }
 
   /**
