@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
 import { DashboardLayout, type NavItem } from '@/app/components/DashboardLayout';
-import { LayoutDashboard, Users, Building2, CalendarCheck, UserCircle, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, CalendarCheck, UserCircle, Settings, Megaphone } from 'lucide-react';
 
 const iconClass = 'size-5 shrink-0';
 
@@ -14,6 +14,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Branches', href: '/dashboard/branches', icon: <Building2 className={iconClass} /> },
   { label: 'Bookings', href: '/dashboard/bookings', icon: <CalendarCheck className={iconClass} /> },
   { label: 'Customers', href: '/dashboard/customers', icon: <UserCircle className={iconClass} /> },
+  { label: 'Marketing', href: '/dashboard/marketing', icon: <Megaphone className={iconClass} /> },
   { label: 'Settings', href: '/dashboard/settings', icon: <Settings className={iconClass} /> },
 ];
 
@@ -28,6 +29,7 @@ const TITLES: Record<string, string> = {
   '/dashboard/branches': 'Branches',
   '/dashboard/bookings': 'Bookings',
   '/dashboard/customers': 'Customers',
+  '/dashboard/marketing': 'Marketing',
   '/dashboard/settings': 'Settings',
 };
 

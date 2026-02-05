@@ -84,7 +84,7 @@ export interface Settings {
   updatedAt?: string;
 }
 
-/** Paginated list response shape (bookings, employees, users) */
+/** Paginated list response shape (bookings, employees, users, templates, sends) */
 export interface PaginatedResponse<T> {
   count: number;
   total: number;
@@ -93,6 +93,66 @@ export interface PaginatedResponse<T> {
   bookings?: T[];
   employees?: T[];
   users?: T[];
+  templates?: T[];
+  sends?: T[];
+}
+
+/** Marketing Template Parameter */
+export interface MarketingTemplateParameter {
+  key: string;
+  position: number;
+  type?: 'string' | 'number' | 'date';
+  required?: boolean;
+  description?: string;
+}
+
+/** Marketing Dynamic Field Enums */
+export const MARKETING_DYNAMIC_FIELDS = {
+  USER_FULLNAME: 'user_fullName',
+  USER_PHONE: 'user_phone',
+  USER_EMAIL: 'user_email',
+  BRANCH_NAME: 'branch_name',
+  BRANCH_NUMBER: 'branch_number',
+} as const;
+
+/** Mapping dynamic field enum to actual database field paths */
+export const MARKETING_FIELD_MAPPING: Record<string, { type: 'user' | 'branch'; field: string }> = {
+  'user_fullName': { type: 'user', field: 'fullName' },
+  'user_phone': { type: 'user', field: 'phone' },
+  'user_email': { type: 'user', field: 'email' },
+  'branch_name': { type: 'branch', field: 'name' },
+  'branch_number': { type: 'branch', field: 'branchNumber' },
+};
+
+/** Marketing Template */
+export interface MarketingTemplate {
+  _id: string;
+  name: string;
+  displayName: string;
+  channel: string;
+  whatsappTemplateName: string;
+  languageCode?: string;
+  bodyExample?: string;
+  parameters?: MarketingTemplateParameter[];
+  isActive?: boolean;
+  createdBy?: { _id: string; name: string; email: string };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Marketing Send Job */
+export interface MarketingSend {
+  _id: string;
+  templateId: string | MarketingTemplate;
+  triggeredBy: string | { _id: string; name: string; email: string };
+  audienceType: 'single' | 'list' | 'branch_customers' | 'all_customers';
+  audienceFilter: Record<string, unknown>;
+  parameters: Record<string, unknown>;
+  perUserParameters?: Record<string, string>;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'partial';
+  stats: { total: number; success: number; failed: number };
+  completedAt?: string;
+  createdAt?: string;
 }
 
 /** Dashboard API response (admin) */
@@ -443,6 +503,139 @@ class ApiClient {
       };
     }
     return normalized;
+  }
+
+  /** Marketing Templates (admin only) */
+  async getMarketingTemplates(params?: {
+    channel?: string;
+    isActive?: boolean;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<MarketingTemplate>> {
+    const search = new URLSearchParams();
+    if (params?.channel) search.set('channel', params.channel);
+    if (params?.isActive !== undefined) search.set('isActive', String(params.isActive));
+    if (params?.page != null) search.set('page', String(params.page));
+    if (params?.limit != null) search.set('limit', String(params.limit));
+    const q = search.toString();
+    const { data } = await this.request<{ count: number; total: number; page: number; limit: number; templates: MarketingTemplate[] }>(
+      `/api/marketing/templates${q ? `?${q}` : ''}`,
+      { method: 'GET' }
+    );
+    if (!data) return { count: 0, total: 0, page: 1, limit: 10, templates: [] };
+    return {
+      count: data.count ?? data.templates?.length ?? 0,
+      total: data.total ?? data.templates?.length ?? 0,
+      page: data.page ?? 1,
+      limit: data.limit ?? 10,
+      templates: data.templates ?? [],
+    };
+  }
+
+  async getMarketingTemplate(id: string): Promise<MarketingTemplate | null> {
+    const { data } = await this.request<MarketingTemplate>(`/api/marketing/templates/${id}`, { method: 'GET' });
+    return data ?? null;
+  }
+
+  async createMarketingTemplate(payload: {
+    name: string;
+    displayName: string;
+    channel: string;
+    whatsappTemplateName: string;
+    languageCode?: string;
+    bodyExample?: string;
+    parameters?: MarketingTemplateParameter[];
+  }): Promise<MarketingTemplate | null> {
+    const { data } = await this.request<MarketingTemplate>('/api/marketing/templates', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return data ?? null;
+  }
+
+  async updateMarketingTemplate(id: string, payload: Partial<MarketingTemplate>): Promise<MarketingTemplate | null> {
+    const { data } = await this.request<MarketingTemplate>(`/api/marketing/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return data ?? null;
+  }
+
+  async deleteMarketingTemplate(id: string): Promise<{ deletedTemplate: { id: string; name: string; displayName: string } } | null> {
+    const { data } = await this.request<{ deletedTemplate: { id: string; name: string; displayName: string } }>(
+      `/api/marketing/templates/${id}`,
+      { method: 'DELETE' }
+    );
+    return data ?? null;
+  }
+
+  async previewMarketingTemplate(id: string, parameters: Record<string, unknown>): Promise<{
+    renderedText: string;
+    whatsappTemplateName: string;
+    languageCode: string;
+    mappedParameters: string[];
+  } | null> {
+    const { data } = await this.request<{
+      renderedText: string;
+      whatsappTemplateName: string;
+      languageCode: string;
+      mappedParameters: string[];
+    }>(`/api/marketing/templates/${id}/preview`, {
+      method: 'POST',
+      body: JSON.stringify({ parameters }),
+    });
+    return data ?? null;
+  }
+
+  async getDynamicFields(): Promise<Array<{ value: string; label: string }> | null> {
+    const { data } = await this.request<{ fields: Array<{ value: string; label: string }> }>('/api/marketing/dynamic-fields', {
+      method: 'GET',
+    });
+    return data?.fields ?? null;
+  }
+
+  async sendMarketingMessage(
+    id: string,
+    payload: {
+      audience: {
+        type: 'single' | 'list' | 'branch_customers' | 'all_customers';
+        phone?: string;
+        phones?: string[];
+        branchId?: string;
+        dateFilter?: { startDate: string; endDate: string };
+      };
+      parameters: Record<string, unknown>;
+    }
+  ): Promise<MarketingSend | null> {
+    const { data } = await this.request<MarketingSend>(`/api/marketing/templates/${id}/send`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return data ?? null;
+  }
+
+  async getMarketingSends(params?: { page?: number; limit?: number }): Promise<PaginatedResponse<MarketingSend>> {
+    const search = new URLSearchParams();
+    if (params?.page != null) search.set('page', String(params.page));
+    if (params?.limit != null) search.set('limit', String(params.limit));
+    const q = search.toString();
+    const { data } = await this.request<{ count: number; total: number; page: number; limit: number; sends: MarketingSend[] }>(
+      `/api/marketing/sends${q ? `?${q}` : ''}`,
+      { method: 'GET' }
+    );
+    if (!data) return { count: 0, total: 0, page: 1, limit: 10, sends: [] };
+    return {
+      count: data.count ?? data.sends?.length ?? 0,
+      total: data.total ?? data.sends?.length ?? 0,
+      page: data.page ?? 1,
+      limit: data.limit ?? 10,
+      sends: data.sends ?? [],
+    };
+  }
+
+  async getMarketingSend(id: string): Promise<MarketingSend | null> {
+    const { data } = await this.request<MarketingSend>(`/api/marketing/sends/${id}`, { method: 'GET' });
+    return data ?? null;
   }
 }
 
