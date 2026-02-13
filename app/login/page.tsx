@@ -87,21 +87,7 @@ export default function LoginPage() {
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-            <div className="mt-6 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center mb-3">Try demo account:</p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setEmail('admin@blackbird.com');
-                  setPassword('123456');
-                }}
-                disabled={isLoading}
-                className="w-full border-border text-foreground hover:bg-muted"
-              >
-                Fill Demo Admin Credentials
-              </Button>
-            </div>
+          
           </CardContent>
         </Card>
 

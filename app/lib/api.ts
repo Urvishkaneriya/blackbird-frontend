@@ -1,10 +1,13 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// --- Config ---
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://10.34.202.58:5000';
 
 /**
  * API client aligned with Postman collection: backend/postman/blackbird-tattoo.postman_collection.json
  * All endpoints (Auth, Dashboard, Bookings, Branches, Employees, Users, Health) are implemented per that spec.
+ * Alternative base URL example: https://blackbird-backend-production.up.railway.app
  */
 
+// --- Auth & API response types ---
 export interface ApiResponse<T = unknown> {
   message: string;
   data: T | null;
@@ -21,6 +24,7 @@ export interface LoginResponse {
   };
 }
 
+// --- Domain models ---
 export interface Employee {
   _id: string;
   uniqueId?: string;
@@ -73,7 +77,6 @@ export interface Booking {
   updatedAt?: string;
 }
 
-/** Settings (admin only) – single doc in DB */
 export interface Settings {
   _id: string;
   whatsappEnabled: boolean;
@@ -84,7 +87,8 @@ export interface Settings {
   updatedAt?: string;
 }
 
-/** Paginated list response shape (bookings, employees, users, templates, sends) */
+// --- Pagination ---
+/** List responses use one of: bookings, employees, users, templates, sends depending on endpoint */
 export interface PaginatedResponse<T> {
   count: number;
   total: number;
@@ -97,7 +101,7 @@ export interface PaginatedResponse<T> {
   sends?: T[];
 }
 
-/** Marketing Template Parameter */
+// --- Marketing ---
 export interface MarketingTemplateParameter {
   key: string;
   position: number;
@@ -155,7 +159,7 @@ export interface MarketingSend {
   createdAt?: string;
 }
 
-/** Dashboard API response (admin) */
+// --- Dashboard ---
 export interface DashboardData {
   dateRange: { startDate: string; endDate: string };
   summary: {
@@ -204,6 +208,16 @@ export interface BranchDashboardData {
     count: number;
     totalAmount: number;
   }>;
+}
+
+/** Builds URL query string from an object; skips undefined/null values */
+function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) search.set(key, String(value));
+  }
+  const q = search.toString();
+  return q ? `?${q}` : '';
 }
 
 class ApiClient {
@@ -313,13 +327,13 @@ class ApiClient {
   }
 
   async getEmployees(params?: { branchId?: string; page?: number; limit?: number }): Promise<PaginatedResponse<Employee>> {
-    const search = new URLSearchParams();
-    if (params?.branchId) search.set('branchId', params.branchId);
-    if (params?.page != null) search.set('page', String(params.page));
-    if (params?.limit != null) search.set('limit', String(params.limit));
-    const q = search.toString();
+    const q = buildQuery({
+      branchId: params?.branchId,
+      page: params?.page,
+      limit: params?.limit,
+    });
     const { data } = await this.request<{ count: number; total: number; page: number; limit: number; employees: Employee[] }>(
-      `/api/employees${q ? `?${q}` : ''}`,
+      `/api/employees${q}`,
       { method: 'GET' }
     );
     if (!data) return { count: 0, total: 0, page: 1, limit: 10, employees: [] };
@@ -383,15 +397,15 @@ class ApiClient {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Booking>> {
-    const search = new URLSearchParams();
-    if (params?.branchId) search.set('branchId', params.branchId);
-    if (params?.startDate) search.set('startDate', params.startDate);
-    if (params?.endDate) search.set('endDate', params.endDate);
-    if (params?.page != null) search.set('page', String(params.page));
-    if (params?.limit != null) search.set('limit', String(params.limit));
-    const q = search.toString();
+    const q = buildQuery({
+      branchId: params?.branchId,
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+      page: params?.page,
+      limit: params?.limit,
+    });
     const { data } = await this.request<{ count: number; total: number; page: number; limit: number; bookings: Booking[] }>(
-      `/api/bookings${q ? `?${q}` : ''}`,
+      `/api/bookings${q}`,
       { method: 'GET' }
     );
     if (!data) return { count: 0, total: 0, page: 1, limit: 10, bookings: [] };
@@ -422,13 +436,13 @@ class ApiClient {
   }
 
   async getUsers(params?: { branchId?: string; page?: number; limit?: number }): Promise<PaginatedResponse<UserCustomer>> {
-    const search = new URLSearchParams();
-    if (params?.branchId) search.set('branchId', params.branchId);
-    if (params?.page != null) search.set('page', String(params.page));
-    if (params?.limit != null) search.set('limit', String(params.limit));
-    const q = search.toString();
+    const q = buildQuery({
+      branchId: params?.branchId,
+      page: params?.page,
+      limit: params?.limit,
+    });
     const { data } = await this.request<{ count: number; total: number; page: number; limit: number; users: UserCustomer[] }>(
-      `/api/users${q ? `?${q}` : ''}`,
+      `/api/users${q}`,
       { method: 'GET' }
     );
     if (!data) return { count: 0, total: 0, page: 1, limit: 10, users: [] };
@@ -463,9 +477,9 @@ class ApiClient {
    * Response: { message, data } per Postman.
    */
   async getDashboard(startDate: string, endDate: string): Promise<DashboardData | BranchDashboardData> {
-    const params = new URLSearchParams({ startDate, endDate });
+    const q = buildQuery({ startDate, endDate });
     const response = await this.request<DashboardData | BranchDashboardData>(
-      `/api/dashboard?${params.toString()}`,
+      `/api/dashboard${q}`,
       { method: 'GET' }
     );
     const data = response.data;
@@ -512,14 +526,14 @@ class ApiClient {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<MarketingTemplate>> {
-    const search = new URLSearchParams();
-    if (params?.channel) search.set('channel', params.channel);
-    if (params?.isActive !== undefined) search.set('isActive', String(params.isActive));
-    if (params?.page != null) search.set('page', String(params.page));
-    if (params?.limit != null) search.set('limit', String(params.limit));
-    const q = search.toString();
+    const q = buildQuery({
+      channel: params?.channel,
+      isActive: params?.isActive,
+      page: params?.page,
+      limit: params?.limit,
+    });
     const { data } = await this.request<{ count: number; total: number; page: number; limit: number; templates: MarketingTemplate[] }>(
-      `/api/marketing/templates${q ? `?${q}` : ''}`,
+      `/api/marketing/templates${q}`,
       { method: 'GET' }
     );
     if (!data) return { count: 0, total: 0, page: 1, limit: 10, templates: [] };
@@ -615,12 +629,9 @@ class ApiClient {
   }
 
   async getMarketingSends(params?: { page?: number; limit?: number }): Promise<PaginatedResponse<MarketingSend>> {
-    const search = new URLSearchParams();
-    if (params?.page != null) search.set('page', String(params.page));
-    if (params?.limit != null) search.set('limit', String(params.limit));
-    const q = search.toString();
+    const q = buildQuery({ page: params?.page, limit: params?.limit });
     const { data } = await this.request<{ count: number; total: number; page: number; limit: number; sends: MarketingSend[] }>(
-      `/api/marketing/sends${q ? `?${q}` : ''}`,
+      `/api/marketing/sends${q}`,
       { method: 'GET' }
     );
     if (!data) return { count: 0, total: 0, page: 1, limit: 10, sends: [] };
