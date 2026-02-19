@@ -13,6 +13,7 @@ import {
   UserCircle,
   Download,
   BarChart3,
+  Package,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -30,7 +31,6 @@ import {
 
 type DatePreset = 'today' | 'week' | 'month' | 'custom';
 
-/** Format date as YYYY-MM-DD in local time (not UTC) so "Today" matches the user's calendar. */
 function toLocalYMD(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -41,29 +41,28 @@ function toLocalYMD(d: Date): string {
 function getDateRange(preset: DatePreset, customStart?: string, customEnd?: string): { start: string; end: string } {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const toYMD = toLocalYMD;
 
   if (preset === 'custom' && customStart && customEnd) {
     return { start: customStart, end: customEnd };
   }
   if (preset === 'today') {
-    return { start: toYMD(today), end: toYMD(today) };
+    return { start: toLocalYMD(today), end: toLocalYMD(today) };
   }
   if (preset === 'week') {
     const start = new Date(today);
     start.setDate(start.getDate() - start.getDay());
     const end = new Date(start);
     end.setDate(end.getDate() + 6);
-    return { start: toYMD(start), end: toYMD(end) };
+    return { start: toLocalYMD(start), end: toLocalYMD(end) };
   }
   if (preset === 'month') {
     const start = new Date(today.getFullYear(), today.getMonth(), 1);
     const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    return { start: toYMD(start), end: toYMD(end) };
+    return { start: toLocalYMD(start), end: toLocalYMD(end) };
   }
   const start = new Date(today.getFullYear(), today.getMonth(), 1);
   const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  return { start: toYMD(start), end: toYMD(end) };
+  return { start: toLocalYMD(start), end: toLocalYMD(end) };
 }
 
 function downloadCSV(rows: string[][], filename: string) {
@@ -123,6 +122,7 @@ export default function DashboardPage() {
       ['Average Order Value', String(summary?.averageOrderValue ?? 0)],
       [],
     ];
+
     if (dashboardData && !isBranchData(dashboardData) && dashboardData.byBranch?.length) {
       rows.push(['By Branch', '', '', '']);
       rows.push(['Branch', 'Bookings', 'Revenue', '']);
@@ -131,23 +131,46 @@ export default function DashboardPage() {
       });
       rows.push([]);
     }
+
     if (dashboardData?.byPaymentMethod?.length) {
       rows.push(['By Payment Method', '', '']);
       rows.push(['Method', 'Count', 'Total Amount']);
       dashboardData.byPaymentMethod.forEach((r) => {
         rows.push([r.paymentMethod, String(r.count), String(r.totalAmount)]);
       });
+      rows.push([]);
     }
+
+    if (dashboardData?.byPaymentMode?.length) {
+      rows.push(['By Payment Mode', '', '']);
+      rows.push(['Mode', 'Count', 'Total Amount']);
+      dashboardData.byPaymentMode.forEach((r) => {
+        rows.push([r.paymentMode, String(r.count), String(r.totalAmount)]);
+      });
+      rows.push([]);
+    }
+
+    if (dashboardData?.topProducts?.length) {
+      rows.push(['Top Products', '', '', '']);
+      rows.push(['Product', 'Quantity', 'Revenue', '']);
+      dashboardData.topProducts.forEach((r) => {
+        rows.push([r.productName, String(r.quantity), String(r.revenue), '']);
+      });
+    }
+
     downloadCSV(rows, `dashboard-${start}-to-${end}.csv`);
   };
 
   const summary = dashboardData?.summary ?? { totalBookings: 0, totalRevenue: 0, uniqueCustomersInRange: 0, averageOrderValue: 0 };
   const byPaymentMethod = dashboardData?.byPaymentMethod ?? [];
+  const byPaymentMode = dashboardData?.byPaymentMode ?? [];
+  const topProducts = dashboardData?.topProducts ?? [];
   const byBranch = dashboardData && 'byBranch' in dashboardData ? (dashboardData as DashboardData).byBranch ?? [] : [];
   const branchInfo = dashboardData && 'branchInfo' in dashboardData ? (dashboardData as BranchDashboardData).branchInfo : null;
   const totals = dashboardData && 'totals' in dashboardData ? (dashboardData as DashboardData).totals : null;
 
   const paymentChartData = byPaymentMethod.map((p) => ({ name: p.paymentMethod, value: p.totalAmount, count: p.count }));
+  const paymentModeChartData = byPaymentMode.map((p) => ({ name: p.paymentMode, value: p.totalAmount, count: p.count }));
   const branchChartData = byBranch.map((b) => ({ name: b.branchName || b.branchNumber, revenue: b.revenue, bookings: b.bookingCount }));
 
   return (
@@ -155,7 +178,7 @@ export default function DashboardPage() {
       <div className="bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 rounded-lg p-4 md:p-6">
         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1">Welcome, {user?.name}!</h2>
         <p className="text-muted-foreground text-sm md:text-base">
-          {isAdmin ? 'System overview & management' : branchInfo ? `${branchInfo.branchName} · Your dashboard` : 'Your dashboard'}
+          {isAdmin ? 'System overview & management' : branchInfo ? `${branchInfo.branchName} - Your dashboard` : 'Your dashboard'}
         </p>
       </div>
 
@@ -213,21 +236,17 @@ export default function DashboardPage() {
               </Button>
             </div>
           </div>
-          {dashboardData && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {start} → {end}
-            </p>
-          )}
+          {dashboardData && <p className="text-xs text-muted-foreground mt-1">{start} to {end}</p>}
         </CardHeader>
       </Card>
 
-      {/* Charts – between date range and stats */}
       {!isLoading && (
         <div className="space-y-4 md:space-y-6">
           <div className="flex items-center gap-2 border-b border-border pb-2">
             <BarChart3 className="size-6 text-primary" />
             <h3 className="text-lg font-semibold text-foreground">Charts & graphs</h3>
           </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <Card className="bg-card border-border overflow-hidden">
               <CardHeader>
@@ -262,31 +281,103 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {(isAdmin || branchChartData.length > 0) ? (
-              <Card className="bg-card border-border overflow-hidden">
-                <CardHeader>
-                  <CardTitle className="text-foreground">Revenue by branch</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[280px] w-full">
-                    {branchChartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={branchChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                          <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
-                          <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => Number(v).toLocaleString()} stroke="var(--muted-foreground)" />
-                          <Tooltip formatter={(v: number) => Number(v).toLocaleString()} />
-                          <Bar dataKey="revenue" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} name="Revenue" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No branch data in selected range</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-foreground">Revenue by payment mode</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[280px] w-full">
+                  {paymentModeChartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={paymentModeChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
+                        <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => Number(v).toLocaleString()} stroke="var(--muted-foreground)" />
+                        <Tooltip formatter={(v: number) => Number(v).toLocaleString()} />
+                        <Bar dataKey="value" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} name="Revenue" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No payment mode data in selected range</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
+          {(isAdmin || branchChartData.length > 0) && (
+            <Card className="bg-card border-border overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-foreground">Revenue by branch</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[280px] w-full">
+                  {branchChartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={branchChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="var(--muted-foreground)" />
+                        <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => Number(v).toLocaleString()} stroke="var(--muted-foreground)" />
+                        <Tooltip formatter={(v: number) => Number(v).toLocaleString()} />
+                        <Bar dataKey="revenue" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} name="Revenue" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm">No branch data in selected range</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {!isLoading && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+          <Card className="bg-card border-border overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-foreground">Payment mode breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {byPaymentMode.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No payment mode data in selected range</p>
+              ) : (
+                <div className="space-y-2">
+                  {byPaymentMode.map((row) => (
+                    <div key={row.paymentMode} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">
+                      <span className="font-medium text-foreground">{row.paymentMode}</span>
+                      <span className="text-muted-foreground">{row.count} bookings</span>
+                      <span className="font-semibold text-primary">{row.totalAmount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border-border overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-foreground">Top products</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {topProducts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No product sales in selected range</p>
+              ) : (
+                <div className="space-y-2">
+                  {topProducts.slice(0, 10).map((row) => (
+                    <div key={row.productId} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Package className="size-4 text-primary shrink-0" />
+                        <span className="font-medium text-foreground truncate">{row.productName}</span>
+                      </div>
+                      <span className="text-muted-foreground">Qty {row.quantity}</span>
+                      <span className="font-semibold text-primary">{row.revenue.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 // --- Config ---
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://10.34.202.58:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 /**
  * API client aligned with Postman collection: backend/postman/blackbird-tattoo.postman_collection.json
@@ -48,6 +48,14 @@ export interface Branch {
   updatedAt?: string;
 }
 
+export interface Product {
+  _id: string;
+  name: string;
+  basePrice: number;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
 export interface UserCustomer {
   _id: string;
   fullName: string;
@@ -59,16 +67,33 @@ export interface UserCustomer {
   updatedAt?: string;
 }
 
+export interface BookingItem {
+  productId: string | { _id: string; name: string; isDefault?: boolean; isActive?: boolean };
+  productName?: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface BookingPayment {
+  cashAmount: number;
+  upiAmount: number;
+  totalAmount: number;
+  paymentMode: 'CASH' | 'UPI' | 'SPLIT';
+}
+
 export interface Booking {
   _id: string;
   bookingNumber: string;
   phone: string;
   fullName: string;
-  amount: number;
-  size: number;
+  amount?: number;
+  size?: number;
   artistName: string;
-  paymentMethod: string;
-  branchId: string | { name: string; branchNumber: string };
+  paymentMethod?: string;
+  items?: BookingItem[];
+  payment?: BookingPayment;
+  branchId: string | { _id?: string; name: string; branchNumber: string };
   userId?: string | UserCustomer;
   employeeId?: string;
   date?: string;
@@ -181,6 +206,17 @@ export interface DashboardData {
     count: number;
     totalAmount: number;
   }>;
+  byPaymentMode?: Array<{
+    paymentMode: 'CASH' | 'UPI' | 'SPLIT';
+    count: number;
+    totalAmount: number;
+  }>;
+  topProducts?: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    revenue: number;
+  }>;
   totals?: {
     totalBranches: number;
     totalEmployees: number;
@@ -208,6 +244,35 @@ export interface BranchDashboardData {
     count: number;
     totalAmount: number;
   }>;
+  byPaymentMode?: Array<{
+    paymentMode: 'CASH' | 'UPI' | 'SPLIT';
+    count: number;
+    totalAmount: number;
+  }>;
+  topProducts?: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    revenue: number;
+  }>;
+}
+
+export interface CreateBookingPayload {
+  phone: string;
+  fullName: string;
+  artistName: string;
+  branchId: string;
+  email?: string;
+  size?: number;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    unitPrice?: number;
+  }>;
+  payment: {
+    cashAmount: number;
+    upiAmount: number;
+  };
 }
 
 /** Builds URL query string from an object; skips undefined/null values */
@@ -318,6 +383,38 @@ class ApiClient {
     return data;
   }
 
+  async getProducts(): Promise<Product[]> {
+    const { data } = await this.request<{ products: Product[]; count?: number }>(
+      '/api/products',
+      { method: 'GET' }
+    );
+    return data?.products ?? [];
+  }
+
+  async createProduct(payload: { name: string; basePrice: number }) {
+    const { data } = await this.request<Product>('/api/products', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return data;
+  }
+
+  async updateProduct(id: string, payload: { name?: string; basePrice?: number }) {
+    const { data } = await this.request<Product>(`/api/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return data;
+  }
+
+  async updateProductStatus(id: string, isActive: boolean) {
+    const { data } = await this.request<Product>(`/api/products/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    });
+    return data;
+  }
+
   async updateBranch(id: string, payload: { name?: string; address?: string }) {
     const { data } = await this.request<Branch>(`/api/branches/${id}`, {
       method: 'PUT',
@@ -418,16 +515,7 @@ class ApiClient {
     };
   }
 
-  async createBooking(payload: {
-    phone: string;
-    fullName: string;
-    amount: number;
-    size: number;
-    artistName: string;
-    paymentMethod: 'CASH' | 'UPI';
-    branchId: string;
-    email?: string;
-  }) {
+  async createBooking(payload: CreateBookingPayload) {
     const { data } = await this.request<Booking>('/api/bookings', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -515,6 +603,16 @@ class ApiClient {
         uniqueCustomersInRange: Number(s.uniqueCustomersInRange ?? s.uniqueCustomersCount ?? 0),
         averageOrderValue: Number(s.averageOrderValue ?? 0),
       };
+    }
+    if (Array.isArray(raw.byPaymentMode)) {
+      (normalized as DashboardData).byPaymentMode = raw.byPaymentMode as DashboardData['byPaymentMode'];
+    } else {
+      (normalized as DashboardData).byPaymentMode = [];
+    }
+    if (Array.isArray(raw.topProducts)) {
+      (normalized as DashboardData).topProducts = raw.topProducts as DashboardData['topProducts'];
+    } else {
+      (normalized as DashboardData).topProducts = [];
     }
     return normalized;
   }

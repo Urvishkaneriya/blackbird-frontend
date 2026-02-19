@@ -1,12 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { apiClient, type Booking, type Branch } from '@/app/lib/api';
-import { CalendarCheck } from 'lucide-react';
+import { apiClient, type Booking, type Branch, type Product } from '@/app/lib/api';
+import { CalendarCheck, Plus, Trash2 } from 'lucide-react';
+
+const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+
+type BookingLineForm = {
+  productId: string;
+  quantity: string;
+  unitPrice: string;
+};
+
+const makeEmptyLine = (productId = ''): BookingLineForm => ({
+  productId,
+  quantity: '1',
+  unitPrice: '',
+});
+
+function numberFromInput(value: string): number {
+  if (!value.trim()) return 0;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : Number.NaN;
+}
 
 export default function BookingsPage() {
   const { user } = useAuth();
@@ -14,6 +34,7 @@ export default function BookingsPage() {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
@@ -28,12 +49,26 @@ export default function BookingsPage() {
     phone: '',
     fullName: '',
     email: '',
-    amount: '',
     size: '',
     artistName: '',
-    paymentMethod: 'CASH' as 'CASH' | 'UPI',
     branchId: '',
+    cashAmount: '',
+    upiAmount: '',
+    items: [makeEmptyLine()],
   });
+
+  const activeProducts = useMemo(
+    () => products.filter((p) => p.isActive || p.isDefault),
+    [products]
+  );
+  const productMap = useMemo(
+    () => new Map(activeProducts.map((p) => [p._id, p])),
+    [activeProducts]
+  );
+  const defaultProductId = useMemo(
+    () => activeProducts.find((p) => p.isDefault)?._id ?? '',
+    [activeProducts]
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -48,14 +83,23 @@ export default function BookingsPage() {
             page,
             limit,
           }),
-          isAdmin ? apiClient.getBranches() : Promise.resolve([]),
+          isAdmin ? apiClient.getBranches() : Promise.resolve([] as Branch[]),
         ]);
+        const productList = await apiClient.getProducts();
         setBookings(bookingRes.bookings ?? []);
         setTotal(bookingRes.total ?? 0);
         setBranches(branchList);
+        setProducts(productList);
         if (isAdmin && branchList.length > 0) {
           setFormData((f) => (f.branchId ? f : { ...f, branchId: branchList[0]._id }));
         }
+        setFormData((f) => {
+          if (f.items.length > 0 && f.items.some((it) => it.productId)) return f;
+          const defaultId = productList.find((p) => p.isDefault && p.isActive)?._id
+            ?? productList.find((p) => p.isActive)?._id
+            ?? '';
+          return { ...f, items: [makeEmptyLine(defaultId)] };
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
@@ -66,27 +110,111 @@ export default function BookingsPage() {
   }, [isAdmin, branchFilter, startDate, endDate, page, limit]);
 
   const effectiveBranchId = isAdmin ? formData.branchId : user?.branchId;
+  const cashAmount = numberFromInput(formData.cashAmount);
+  const upiAmount = numberFromInput(formData.upiAmount);
+
+  const itemTotal = useMemo(() => {
+    return formData.items.reduce((sum, item) => {
+      const product = productMap.get(item.productId);
+      const qty = numberFromInput(item.quantity);
+      if (!product || !Number.isFinite(qty) || qty < 1) return sum;
+      const editablePrice = numberFromInput(item.unitPrice);
+      const unitPrice = product.isDefault ? editablePrice : product.basePrice;
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) return sum;
+      return sum + qty * unitPrice;
+    }, 0);
+  }, [formData.items, productMap]);
+
+  const paymentTotal = (Number.isFinite(cashAmount) ? cashAmount : 0) + (Number.isFinite(upiAmount) ? upiAmount : 0);
+  const paymentMismatch = Math.abs(paymentTotal - itemTotal) > 0.001;
+
+  const setLine = (index: number, patch: Partial<BookingLineForm>) => {
+    setFormData((prev) => ({
+      ...prev,
+      items: prev.items.map((line, i) => (i === index ? { ...line, ...patch } : line)),
+    }));
+  };
+
+  const addLine = () => {
+    const fallbackId = defaultProductId || activeProducts[0]?._id || '';
+    setFormData((prev) => ({ ...prev, items: [...prev.items, makeEmptyLine(fallbackId)] }));
+  };
+
+  const removeLine = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      items: prev.items.length === 1 ? prev.items : prev.items.filter((_, i) => i !== index),
+    }));
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amount = Number(formData.amount);
-    const size = Number(formData.size);
-    if (!effectiveBranchId || Number.isNaN(amount) || Number.isNaN(size)) {
+    const size = formData.size.trim() ? Number(formData.size) : undefined;
+    if (!effectiveBranchId) {
       setError(isAdmin ? 'Fill required fields correctly.' : 'Your branch is not set. Contact admin.');
       return;
     }
+    if (!formData.fullName || !formData.phone || !formData.artistName) {
+      setError('Please fill all required fields.');
+      return;
+    }
+    if (size !== undefined && (Number.isNaN(size) || size < 0)) {
+      setError('Size must be a valid number.');
+      return;
+    }
+    if (formData.items.length === 0) {
+      setError('At least one product item is required.');
+      return;
+    }
+
+    const normalizedItems: Array<{ productId: string; quantity: number; unitPrice?: number }> = [];
+    for (const line of formData.items) {
+      const product = productMap.get(line.productId);
+      const quantity = Number(line.quantity);
+      if (!product || !Number.isInteger(quantity) || quantity < 1) {
+        setError('Each line item must have product and quantity >= 1.');
+        return;
+      }
+      if (product.isDefault) {
+        const unitPrice = Number(line.unitPrice);
+        if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+          setError('Tattoo item requires editable unit price.');
+          return;
+        }
+        normalizedItems.push({ productId: product._id, quantity, unitPrice });
+      } else {
+        normalizedItems.push({ productId: product._id, quantity });
+      }
+    }
+
+    if (!Number.isFinite(cashAmount) || cashAmount < 0 || !Number.isFinite(upiAmount) || upiAmount < 0) {
+      setError('Cash/UPI values must be zero or positive.');
+      return;
+    }
+    if (cashAmount <= 0 && upiAmount <= 0) {
+      setError('At least one payment amount must be greater than zero.');
+      return;
+    }
+    if (paymentMismatch) {
+      setError('Payment total must exactly match item total.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
       const created = await apiClient.createBooking({
         phone: formData.phone,
         fullName: formData.fullName,
-        amount,
-        size,
         artistName: formData.artistName,
-        paymentMethod: formData.paymentMethod,
         branchId: effectiveBranchId,
         email: formData.email || undefined,
+        size,
+        items: normalizedItems,
+        payment: {
+          cashAmount,
+          upiAmount,
+        },
       });
       if (created) {
         setBookings((prev) => [created, ...prev]);
@@ -95,11 +223,12 @@ export default function BookingsPage() {
           phone: '',
           fullName: '',
           email: '',
-          amount: '',
           size: '',
           artistName: '',
-          paymentMethod: 'CASH',
           branchId: isAdmin ? formData.branchId : '',
+          cashAmount: '',
+          upiAmount: '',
+          items: [makeEmptyLine(defaultProductId || activeProducts[0]?._id || '')],
         });
         setShowForm(false);
       }
@@ -112,6 +241,17 @@ export default function BookingsPage() {
 
   const branchName = (b: Booking['branchId']) =>
     typeof b === 'object' && b !== null && 'name' in b ? b.name : '-';
+  const resolveProductPrice = (line: BookingLineForm) => {
+    const product = productMap.get(line.productId);
+    if (!product) return Number.NaN;
+    return product.isDefault ? numberFromInput(line.unitPrice) : product.basePrice;
+  };
+  const bookingTotal = (b: Booking) => b.payment?.totalAmount ?? b.amount ?? 0;
+  const bookingPaymentLabel = (b: Booking) => {
+    if (b.payment?.paymentMode === 'SPLIT') return 'CASH + UPI';
+    if (b.payment?.paymentMode) return b.payment.paymentMode;
+    return b.paymentMethod ?? '-';
+  };
 
   const canCreate = isAdmin || (user?.branchId && user.role === 'employee');
 
@@ -179,17 +319,6 @@ export default function BookingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Amount *</label>
-                  <Input
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    placeholder="5000"
-                    disabled={isSubmitting}
-                    className="bg-background border-border text-foreground"
-                  />
-                </div>
-                <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Size *</label>
                   <Input
                     type="number"
@@ -210,18 +339,6 @@ export default function BookingsPage() {
                     className="bg-background border-border text-foreground"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Payment *</label>
-                  <select
-                    value={formData.paymentMethod}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as 'CASH' | 'UPI' })}
-                    disabled={isSubmitting}
-                    className="w-full h-10 px-3 rounded-md border border-border bg-background text-foreground"
-                  >
-                    <option value="CASH">CASH</option>
-                    <option value="UPI">UPI</option>
-                  </select>
-                </div>
                 {isAdmin && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Branch *</label>
@@ -237,6 +354,139 @@ export default function BookingsPage() {
                       ))}
                     </select>
                   </div>
+                )}
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-foreground">Items *</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLine}
+                    disabled={isSubmitting || activeProducts.length === 0}
+                    className="border-border text-foreground"
+                  >
+                    <Plus className="size-4 mr-1" />
+                    Add item
+                  </Button>
+                </div>
+
+                {formData.items.map((line, index) => {
+                  const selected = productMap.get(line.productId);
+                  const unitPrice = resolveProductPrice(line);
+                  const qty = numberFromInput(line.quantity);
+                  const lineTotal =
+                    Number.isFinite(unitPrice) && Number.isFinite(qty) && qty > 0
+                      ? unitPrice * qty
+                      : 0;
+
+                  return (
+                    <div key={`${index}-${line.productId}`} className="rounded-lg border border-border p-3 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div className="sm:col-span-5 space-y-1">
+                          <label className="text-xs text-muted-foreground">Product</label>
+                          <select
+                            value={line.productId}
+                            onChange={(e) => {
+                              const nextId = e.target.value;
+                              const nextProduct = productMap.get(nextId);
+                              setLine(index, {
+                                productId: nextId,
+                                unitPrice: nextProduct && !nextProduct.isDefault
+                                  ? String(nextProduct.basePrice)
+                                  : line.unitPrice,
+                              });
+                            }}
+                            disabled={isSubmitting || activeProducts.length === 0}
+                            className="w-full h-10 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                          >
+                            <option value="">Select product</option>
+                            {activeProducts.map((p) => (
+                              <option key={p._id} value={p._id}>{p.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="sm:col-span-2 space-y-1">
+                          <label className="text-xs text-muted-foreground">Qty</label>
+                          <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={line.quantity}
+                            onChange={(e) => setLine(index, { quantity: e.target.value })}
+                            disabled={isSubmitting}
+                            className="bg-background border-border text-foreground"
+                          />
+                        </div>
+                        <div className="sm:col-span-3 space-y-1">
+                          <label className="text-xs text-muted-foreground">
+                            Unit Price {selected?.isDefault ? '(editable)' : '(fixed)'}
+                          </label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={selected && !selected.isDefault ? String(selected.basePrice) : line.unitPrice}
+                            onChange={(e) => setLine(index, { unitPrice: e.target.value })}
+                            disabled={isSubmitting || (!!selected && !selected.isDefault)}
+                            className="bg-background border-border text-foreground"
+                          />
+                        </div>
+                        <div className="sm:col-span-2 flex sm:justify-end sm:items-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeLine(index)}
+                            disabled={isSubmitting || formData.items.length === 1}
+                            className="w-full sm:w-auto border-border text-foreground"
+                          >
+                            <Trash2 className="size-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Line total: INR {INR.format(lineTotal)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Cash Amount *</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.cashAmount}
+                    onChange={(e) => setFormData({ ...formData, cashAmount: e.target.value })}
+                    placeholder="0"
+                    disabled={isSubmitting}
+                    className="bg-background border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">UPI Amount *</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.upiAmount}
+                    onChange={(e) => setFormData({ ...formData, upiAmount: e.target.value })}
+                    placeholder="0"
+                    disabled={isSubmitting}
+                    className="bg-background border-border text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-3 text-sm bg-muted/30 space-y-1">
+                <p className="text-foreground">Items total: <span className="font-semibold">INR {INR.format(itemTotal)}</span></p>
+                <p className="text-foreground">Payment total: <span className="font-semibold">INR {INR.format(paymentTotal)}</span></p>
+                {paymentMismatch && (
+                  <p className="text-destructive text-xs">Payment total must match items total exactly.</p>
                 )}
               </div>
               <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
@@ -255,9 +505,10 @@ export default function BookingsPage() {
                     isSubmitting ||
                     !formData.fullName ||
                     !formData.phone ||
-                    !formData.amount ||
-                    formData.size === '' ||
                     !formData.artistName ||
+                    formData.items.length === 0 ||
+                    activeProducts.length === 0 ||
+                    paymentMismatch ||
                     !effectiveBranchId
                   }
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -325,14 +576,44 @@ export default function BookingsPage() {
           ) : bookings.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">No bookings yet</div>
           ) : (
-            <div className="overflow-x-auto -mx-4 md:mx-0">
-              <table className="w-full text-sm min-w-[640px]">
+            <>
+              <div className="space-y-3 md:hidden">
+                {bookings.map((b) => (
+                  <div key={b._id} className="rounded-lg border border-border p-3 bg-background/60">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{b.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{b.bookingNumber}</p>
+                      </div>
+                      <p className="text-sm font-semibold text-primary">INR {INR.format(bookingTotal(b))}</p>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <p className="text-muted-foreground">Phone: <span className="text-foreground">{b.phone}</span></p>
+                      <p className="text-muted-foreground">Size: <span className="text-foreground">{b.size ?? '-'}</span></p>
+                      <p className="text-muted-foreground">Artist: <span className="text-foreground">{b.artistName}</span></p>
+                      <p className="text-muted-foreground">Payment: <span className="text-foreground">{bookingPaymentLabel(b)}</span></p>
+                      {isAdmin && (
+                        <p className="text-muted-foreground col-span-2">Branch: <span className="text-foreground">{branchName(b.branchId)}</span></p>
+                      )}
+                      {b.payment && (
+                        <p className="text-muted-foreground col-span-2">
+                          Cash {INR.format(b.payment.cashAmount)} + UPI {INR.format(b.payment.upiAmount)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm min-w-[880px]">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">#</th>
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Customer</th>
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Phone</th>
-                    <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Amount</th>
+                    <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Items</th>
+                    <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Total</th>
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Size</th>
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Artist</th>
                     {isAdmin && (
@@ -347,18 +628,22 @@ export default function BookingsPage() {
                       <td className="py-3 px-2 md:px-4 text-foreground text-xs">{b.bookingNumber}</td>
                       <td className="py-3 px-2 md:px-4 text-foreground font-medium">{b.fullName}</td>
                       <td className="py-3 px-2 md:px-4 text-foreground">{b.phone}</td>
-                      <td className="py-3 px-2 md:px-4 text-foreground">{b.amount}</td>
-                      <td className="py-3 px-2 md:px-4 text-foreground">{b.size}</td>
+                      <td className="py-3 px-2 md:px-4 text-foreground text-xs">
+                        {b.items?.length ? b.items.map((it) => `${it.productName ?? 'Item'} x${it.quantity}`).join(', ') : '-'}
+                      </td>
+                      <td className="py-3 px-2 md:px-4 text-foreground">INR {INR.format(bookingTotal(b))}</td>
+                      <td className="py-3 px-2 md:px-4 text-foreground">{b.size ?? '-'}</td>
                       <td className="py-3 px-2 md:px-4 text-foreground">{b.artistName}</td>
                       {isAdmin && (
                         <td className="py-3 px-2 md:px-4 text-foreground text-xs">{branchName(b.branchId)}</td>
                       )}
-                      <td className="py-3 px-2 md:px-4 text-foreground text-xs">{b.paymentMethod}</td>
+                      <td className="py-3 px-2 md:px-4 text-foreground text-xs">{bookingPaymentLabel(b)}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            </>
           )}
           {!isLoading && total > limit && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
