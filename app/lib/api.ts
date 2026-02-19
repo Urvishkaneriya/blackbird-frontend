@@ -61,6 +61,7 @@ export interface UserCustomer {
   fullName: string;
   phone: string;
   email?: string;
+  birthday?: string;
   totalOrders: number;
   totalAmount: number;
   createdAt?: string;
@@ -87,6 +88,7 @@ export interface Booking {
   bookingNumber: string;
   phone: string;
   fullName: string;
+  birthday?: string;
   amount?: number;
   size?: number;
   artistName: string;
@@ -259,6 +261,7 @@ export interface BranchDashboardData {
 
 export interface CreateBookingPayload {
   phone: string;
+  birthday: string;
   fullName: string;
   artistName: string;
   branchId: string;
@@ -523,9 +526,10 @@ class ApiClient {
     return data;
   }
 
-  async getUsers(params?: { branchId?: string; page?: number; limit?: number }): Promise<PaginatedResponse<UserCustomer>> {
+  async getUsers(params?: { branchId?: string; birthday?: string; page?: number; limit?: number }): Promise<PaginatedResponse<UserCustomer>> {
     const q = buildQuery({
       branchId: params?.branchId,
+      birthday: params?.birthday,
       page: params?.page,
       limit: params?.limit,
     });

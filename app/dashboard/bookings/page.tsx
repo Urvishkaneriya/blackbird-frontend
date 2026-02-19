@@ -28,6 +28,12 @@ function numberFromInput(value: string): number {
   return Number.isFinite(n) ? n : Number.NaN;
 }
 
+function normalizeQuantityForProduct(product: Product | undefined, quantity: string): string {
+  if (!product) return quantity;
+  if (product.isDefault) return '1';
+  return quantity;
+}
+
 export default function BookingsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -47,6 +53,7 @@ export default function BookingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     phone: '',
+    birthday: '',
     fullName: '',
     email: '',
     size: '',
@@ -154,7 +161,7 @@ export default function BookingsPage() {
       setError(isAdmin ? 'Fill required fields correctly.' : 'Your branch is not set. Contact admin.');
       return;
     }
-    if (!formData.fullName || !formData.phone || !formData.artistName) {
+    if (!formData.fullName || !formData.phone || !formData.artistName || !formData.birthday) {
       setError('Please fill all required fields.');
       return;
     }
@@ -176,6 +183,10 @@ export default function BookingsPage() {
         return;
       }
       if (product.isDefault) {
+        if (quantity !== 1) {
+          setError('Default Tattoo product quantity must be 1.');
+          return;
+        }
         const unitPrice = Number(line.unitPrice);
         if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
           setError('Tattoo item requires editable unit price.');
@@ -205,6 +216,7 @@ export default function BookingsPage() {
     try {
       const created = await apiClient.createBooking({
         phone: formData.phone,
+        birthday: formData.birthday,
         fullName: formData.fullName,
         artistName: formData.artistName,
         branchId: effectiveBranchId,
@@ -221,6 +233,7 @@ export default function BookingsPage() {
         setTotal((t) => t + 1);
         setFormData({
           phone: '',
+          birthday: '',
           fullName: '',
           email: '',
           size: '',
@@ -319,6 +332,16 @@ export default function BookingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Birthday *</label>
+                  <Input
+                    type="date"
+                    value={formData.birthday}
+                    onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                    disabled={isSubmitting}
+                    className="bg-background border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Size *</label>
                   <Input
                     type="number"
@@ -394,6 +417,7 @@ export default function BookingsPage() {
                               const nextProduct = productMap.get(nextId);
                               setLine(index, {
                                 productId: nextId,
+                                quantity: normalizeQuantityForProduct(nextProduct, line.quantity),
                                 unitPrice: nextProduct && !nextProduct.isDefault
                                   ? String(nextProduct.basePrice)
                                   : line.unitPrice,
@@ -414,9 +438,9 @@ export default function BookingsPage() {
                             type="number"
                             min={1}
                             step={1}
-                            value={line.quantity}
-                            onChange={(e) => setLine(index, { quantity: e.target.value })}
-                            disabled={isSubmitting}
+                            value={selected?.isDefault ? '1' : line.quantity}
+                            onChange={(e) => setLine(index, { quantity: normalizeQuantityForProduct(selected, e.target.value) })}
+                            disabled={isSubmitting || !!selected?.isDefault}
                             className="bg-background border-border text-foreground"
                           />
                         </div>
@@ -505,6 +529,7 @@ export default function BookingsPage() {
                     isSubmitting ||
                     !formData.fullName ||
                     !formData.phone ||
+                    !formData.birthday ||
                     !formData.artistName ||
                     formData.items.length === 0 ||
                     activeProducts.length === 0 ||
