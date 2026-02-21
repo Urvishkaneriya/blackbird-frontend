@@ -26,20 +26,13 @@ export function DashboardLayout({ children, navItems, pageTitle }: DashboardLayo
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
     const mq = window.matchMedia('(min-width: 768px)');
-    if (mq.matches) setDrawerOpen(false);
     const handler = () => { if (mq.matches) setDrawerOpen(false); };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
-  }, [mounted]);
+  }, []);
 
   const handleLogout = () => {
     logout();

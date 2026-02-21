@@ -1,5 +1,4 @@
-// --- Config ---
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { API_BASE_URL } from './env';
 
 /**
  * API client aligned with Postman collection: backend/postman/blackbird-tattoo.postman_collection.json
@@ -290,6 +289,7 @@ function buildQuery(params: Record<string, string | number | boolean | undefined
 
 class ApiClient {
   private token: string | null = null;
+  private static readonly REQUEST_TIMEOUT_MS = 15000;
 
   setToken(token: string) {
     this.token = token;
@@ -318,24 +318,44 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+    const headers: Record<string, string> = {
       ...(options.headers as Record<string, string>),
     };
+    if (options.body !== undefined && !(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     const token = this.getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(url, { ...options, headers });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ApiClient.REQUEST_TIMEOUT_MS);
+    const mergedSignal = options.signal ?? controller.signal;
+
+    let res: Response;
+    try {
+      res = await fetch(url, { ...options, headers, signal: mergedSignal });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     const newToken = res.headers.get('X-New-Token');
     if (newToken) {
       this.setToken(newToken);
     }
 
-    const data = (await res.json()) as ApiResponse<T>;
+    const contentType = res.headers.get('content-type') ?? '';
+    const isJson = contentType.includes('application/json');
+    const data = isJson
+      ? ((await res.json()) as ApiResponse<T>)
+      : ({ message: await res.text(), data: null } as ApiResponse<T>);
 
     if (!res.ok) {
       throw new Error(data.message || `HTTP ${res.status}`);

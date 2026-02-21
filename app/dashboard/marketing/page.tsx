@@ -6,7 +6,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { apiClient, type MarketingTemplate, type MarketingSend, type Branch, MARKETING_DYNAMIC_FIELDS } from '@/app/lib/api';
+import { apiClient, type MarketingTemplate, type MarketingSend, type Branch, type MarketingTemplateParameter, MARKETING_DYNAMIC_FIELDS } from '@/app/lib/api';
 import { Megaphone, Plus, Eye, Send, Trash2, X, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 type Tab = 'templates' | 'sends';
@@ -37,7 +37,7 @@ export default function MarketingPage() {
     whatsappTemplateName: '',
     languageCode: 'en',
     bodyExample: '',
-    parameters: [] as Array<{ key: string; position: number; type: string; required: boolean; description: string }>,
+    parameters: [] as MarketingTemplateParameter[],
   });
 
   const [dynamicFields, setDynamicFields] = useState<Array<{ value: string; label: string }>>([]);
@@ -172,7 +172,7 @@ export default function MarketingPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const audience: Record<string, unknown> = { type: sendForm.audienceType };
+      const audience: Parameters<typeof apiClient.sendMarketingMessage>[1]['audience'] = { type: sendForm.audienceType };
       if (sendForm.audienceType === 'single') {
         if (!sendForm.phone) throw new Error('Phone required');
         audience.phone = sendForm.phone;
@@ -198,7 +198,7 @@ export default function MarketingPage() {
         }
       });
       const sent = await apiClient.sendMarketingMessage(selectedTemplate._id, {
-        audience: audience as any,
+        audience,
         parameters: params,
       });
       if (sent) {
@@ -242,7 +242,11 @@ export default function MarketingPage() {
     });
   };
 
-  const updateParameter = (index: number, field: string, value: unknown) => {
+  const updateParameter = (
+    index: number,
+    field: keyof MarketingTemplateParameter,
+    value: MarketingTemplateParameter[keyof MarketingTemplateParameter]
+  ) => {
     const updated = [...templateForm.parameters];
     updated[index] = { ...updated[index], [field]: value };
     setTemplateForm({ ...templateForm, parameters: updated });
@@ -618,7 +622,7 @@ export default function MarketingPage() {
                 <label className="text-sm font-medium text-foreground">Audience Type *</label>
                 <select
                   value={sendForm.audienceType}
-                  onChange={(e) => setSendForm({ ...sendForm, audienceType: e.target.value as any })}
+                  onChange={(e) => setSendForm({ ...sendForm, audienceType: e.target.value as typeof sendForm.audienceType })}
                   className="w-full h-10 px-3 rounded-md border border-border bg-background text-foreground"
                 >
                   <option value="single">Single Phone</option>

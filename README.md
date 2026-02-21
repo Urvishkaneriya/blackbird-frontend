@@ -2,15 +2,31 @@
 
 Next.js frontend for the Blackbird Tattoo backend API.
 
-## Run
+## Local development
+
+1. Install dependencies: `pnpm install`
+2. Create env file: `cp .env.example .env.local`
+3. Start app: `pnpm dev`
+4. Open `http://localhost:3000`
+
+## Environment variables
+
+- `NEXT_PUBLIC_API_URL`: absolute backend base URL, for example `https://api.example.com`
+
+Notes:
+- In development, this defaults to `http://localhost:5000` if unset.
+- In production, `NEXT_PUBLIC_API_URL` is required and validated at build/runtime startup.
+
+## Production checks
+
+Run before deployment:
 
 ```bash
-pnpm install
-pnpm dev
+pnpm check
 ```
 
-Open http://localhost:3000. Set `NEXT_PUBLIC_API_URL=http://localhost:5000` in `.env.local` if the backend runs elsewhere.
+This runs linting, TypeScript checks, and production build.
 
 ## Backend
 
-Run the backend (Node + Express + MongoDB) separately. See the backend repo for setup. Login: `admin@blackbird.com` / `123456` (or whatever is set in backend `.env`).
+Run the backend (Node + Express + MongoDB) separately. See the backend repository for backend setup and secure credential provisioning.
