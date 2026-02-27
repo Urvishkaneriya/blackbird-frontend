@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BlackbirdLogo } from '@/app/components/Logo';
 import { ThemeToggle } from '@/app/components/ThemeToggle';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, error, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -61,7 +63,7 @@ export default function LoginPage() {
                 <label className="text-sm font-medium text-foreground">Email</label>
                 <Input
                   type="email"
-                  placeholder="admin@blackbird.com"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-background border-border text-foreground placeholder:text-muted-foreground"
@@ -70,14 +72,25 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Password</label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-background border-border text-foreground placeholder:text-muted-foreground"
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-background border-border text-foreground placeholder:text-muted-foreground pr-10"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <Button
                 type="submit"
