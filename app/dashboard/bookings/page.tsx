@@ -265,6 +265,10 @@ export default function BookingsPage() {
     if (b.payment?.paymentMode) return b.payment.paymentMode;
     return b.paymentMethod ?? '-';
   };
+  const bookingSplitPaymentDetails = (b: Booking) => {
+    if (b.payment?.paymentMode !== 'SPLIT') return null;
+    return `Cash ${INR.format(b.payment.cashAmount)} + UPI ${INR.format(b.payment.upiAmount)}`;
+  };
 
   const canCreate = isAdmin || (user?.branchId && user.role === 'employee');
 
@@ -620,9 +624,9 @@ export default function BookingsPage() {
                       {isAdmin && (
                         <p className="text-muted-foreground col-span-2">Branch: <span className="text-foreground">{branchName(b.branchId)}</span></p>
                       )}
-                      {b.payment && (
+                      {bookingSplitPaymentDetails(b) && (
                         <p className="text-muted-foreground col-span-2">
-                          Cash {INR.format(b.payment.cashAmount)} + UPI {INR.format(b.payment.upiAmount)}
+                          {bookingSplitPaymentDetails(b)}
                         </p>
                       )}
                     </div>
@@ -662,7 +666,12 @@ export default function BookingsPage() {
                       {isAdmin && (
                         <td className="py-3 px-2 md:px-4 text-foreground text-xs">{branchName(b.branchId)}</td>
                       )}
-                      <td className="py-3 px-2 md:px-4 text-foreground text-xs">{bookingPaymentLabel(b)}</td>
+                      <td className="py-3 px-2 md:px-4 text-foreground text-xs">
+                        <p>{bookingPaymentLabel(b)}</p>
+                        {bookingSplitPaymentDetails(b) && (
+                          <p className="text-muted-foreground mt-1">{bookingSplitPaymentDetails(b)}</p>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
