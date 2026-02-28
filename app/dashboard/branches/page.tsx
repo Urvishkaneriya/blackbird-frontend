@@ -113,7 +113,7 @@ export default function BranchesPage() {
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Downtown Branch"
+                  placeholder="Enter branch name"
                   disabled={isSubmitting}
                   className="bg-background border-border text-foreground"
                 />
@@ -123,7 +123,7 @@ export default function BranchesPage() {
                 <Input
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="123 Main St"
+                  placeholder="Enter branch address"
                   disabled={isSubmitting}
                   className="bg-background border-border text-foreground"
                 />

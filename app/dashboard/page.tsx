@@ -300,14 +300,14 @@ export default function DashboardPage() {
                     type="date"
                     value={customStart}
                     onChange={(e) => setCustomStart(e.target.value)}
-                    className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                    className="date-input-theme h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
                   />
                   <span className="text-muted-foreground">to</span>
                   <input
                     type="date"
                     value={customEnd}
                     onChange={(e) => setCustomEnd(e.target.value)}
-                    className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                    className="date-input-theme h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
                   />
                 </div>
               )}
@@ -334,7 +334,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-foreground">Revenue by payment method</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full">
+                <div className="h-[300px] w-full">
                   {paymentChartData.length > 0 && paymentChartData.some((d) => d.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -367,7 +367,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-foreground">Revenue by payment mode</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full">
+                <div className="h-[300px] w-full">
                   {paymentModeChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={paymentModeChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-foreground">Revenue by branch</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full">
+                <div className="h-[300px] w-full">
                   {branchChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={branchChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>

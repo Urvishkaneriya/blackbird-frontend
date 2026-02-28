@@ -123,4 +123,26 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  input[type='date'],
+  .date-input-theme {
+    color-scheme: light;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator,
+  .date-input-theme::-webkit-calendar-picker-indicator {
+    filter: invert(0) brightness(0) !important;
+    opacity: 1;
+  }
+
+  .dark input[type='date'],
+  .dark .date-input-theme {
+    color-scheme: dark;
+  }
+
+  .dark input[type='date']::-webkit-calendar-picker-indicator,
+  .dark .date-input-theme::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1) !important;
+    opacity: 1;
+  }
 }

@@ -189,7 +189,7 @@ export default function ProductsPage() {
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Aftercare Kit"
+                    placeholder="Enter product name"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />

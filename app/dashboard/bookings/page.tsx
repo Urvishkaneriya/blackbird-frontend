@@ -309,7 +309,7 @@ export default function BookingsPage() {
                   <Input
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    placeholder="Jane Doe"
+                    placeholder="Enter Customer Name"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -319,7 +319,7 @@ export default function BookingsPage() {
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="9876543210"
+                    placeholder="Enter phone number"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -330,7 +330,7 @@ export default function BookingsPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="jane@example.com"
+                    placeholder="Enter email address"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -342,7 +342,7 @@ export default function BookingsPage() {
                     value={formData.birthday}
                     onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                     disabled={isSubmitting}
-                    className="bg-background border-border text-foreground"
+                    className="date-input-theme bg-background border-border text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
@@ -351,7 +351,7 @@ export default function BookingsPage() {
                     type="number"
                     value={formData.size}
                     onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                    placeholder="5"
+                    placeholder="Enter size in sq. inches"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -361,7 +361,7 @@ export default function BookingsPage() {
                   <Input
                     value={formData.artistName}
                     onChange={(e) => setFormData({ ...formData, artistName: e.target.value })}
-                    placeholder="Artist"
+                    placeholder="Enter artist name"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -584,14 +584,14 @@ export default function BookingsPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-                className="h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
               />
               <label className="text-sm text-muted-foreground">To</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-                className="h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
               />
             </div>
           </div>

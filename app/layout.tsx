@@ -1,13 +1,12 @@
-import React from "react"
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import { AuthProvider } from './context/AuthContext'
-import { Providers } from './providers'
-import './globals.css'
+import React from "react";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
+import { Providers } from './providers';
+import './globals.css';
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _geist = Geist({ subsets: ['latin'] });
+const _geistMono = Geist_Mono({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Blackbird Tattoo Management System',
@@ -16,35 +15,52 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
+        url: '/logo_light.png',
+        media: '(prefers-color-scheme: light)',
+        sizes: '32x32',
+        type: 'image/png',
+      },
+      {
+        url: '/logo_dark.png',
+        media: '(prefers-color-scheme: dark)',
+        sizes: '32x32',
+        type: 'image/png',
+      },
+    ],
+    shortcut: [
+      {
+        url: '/logo_light.png',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/icon-dark-32x32.png',
+        url: '/logo_dark.png',
         media: '(prefers-color-scheme: dark)',
       },
+    ],
+    apple: [
       {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/logo_light.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/logo_dark.png',
+        media: '(prefers-color-scheme: dark)',
       },
     ],
-    apple: '/apple-icon.png',
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
-        <Providers>
-          {children}
-        </Providers>
+      <body className="font-sans antialiased">
+        <Providers>{children}</Providers>
         <Analytics />
       </body>
     </html>
-  )
+  );
 }
