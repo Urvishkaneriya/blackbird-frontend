@@ -41,6 +41,8 @@ export interface Branch {
   _id: string;
   name: string;
   address: string;
+  phoneNumber: string;
+  whatsappNumberId: string;
   branchNumber: string;
   employeeCount: number;
   createdAt?: string;
@@ -109,6 +111,10 @@ export interface Settings {
   reminderEnabled: boolean;
   reminderTimeDays: number;
   selfInvoiceMessageEnabled: boolean;
+  wpToken?: string;
+  wpAccountId?: string;
+  selfSendNumber?: string;
+  wpMediaId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -398,7 +404,7 @@ class ApiClient {
     return data?.branches ?? [];
   }
 
-  async createBranch(payload: { name: string; address: string }) {
+  async createBranch(payload: { name: string; address: string; phoneNumber: string; whatsappNumberId: string }) {
     const { data } = await this.request<Branch>('/api/branches', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -438,7 +444,7 @@ class ApiClient {
     return data;
   }
 
-  async updateBranch(id: string, payload: { name?: string; address?: string }) {
+  async updateBranch(id: string, payload: { name?: string; address?: string; phoneNumber?: string; whatsappNumberId?: string }) {
     const { data } = await this.request<Branch>(`/api/branches/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
@@ -573,7 +579,14 @@ class ApiClient {
     return data ?? null;
   }
 
-  async updateSettings(payload: Partial<Pick<Settings, 'whatsappEnabled' | 'reminderEnabled' | 'reminderTimeDays' | 'selfInvoiceMessageEnabled'>>): Promise<Settings | null> {
+  async updateSettings(
+    payload: Partial<
+      Pick<
+        Settings,
+        'whatsappEnabled' | 'reminderEnabled' | 'reminderTimeDays' | 'selfInvoiceMessageEnabled' | 'wpToken' | 'wpAccountId' | 'selfSendNumber' | 'wpMediaId'
+      >
+    >
+  ): Promise<Settings | null> {
     const { data } = await this.request<Settings>('/api/settings', {
       method: 'PUT',
       body: JSON.stringify(payload),

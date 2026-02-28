@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { apiClient, type Settings } from '@/app/lib/api';
 import { Settings as SettingsIcon } from 'lucide-react';
 
@@ -22,6 +23,10 @@ export default function SettingsPage() {
     reminderEnabled: true,
     reminderTimeDays: 60,
     selfInvoiceMessageEnabled: true,
+    wpToken: '',
+    wpAccountId: '',
+    selfSendNumber: '',
+    wpMediaId: '',
   });
 
   useEffect(() => {
@@ -45,6 +50,10 @@ export default function SettingsPage() {
             reminderEnabled: data.reminderEnabled ?? true,
             reminderTimeDays: data.reminderTimeDays ?? 60,
             selfInvoiceMessageEnabled: data.selfInvoiceMessageEnabled ?? true,
+            wpToken: data.wpToken ?? '',
+            wpAccountId: data.wpAccountId ?? '',
+            selfSendNumber: data.selfSendNumber ?? '',
+            wpMediaId: data.wpMediaId ?? '',
           });
         }
       } catch (err) {
@@ -67,6 +76,10 @@ export default function SettingsPage() {
         reminderEnabled: form.reminderEnabled,
         reminderTimeDays: Math.max(1, Math.min(365, form.reminderTimeDays)),
         selfInvoiceMessageEnabled: form.selfInvoiceMessageEnabled,
+        wpToken: form.wpToken.trim() || undefined,
+        wpAccountId: form.wpAccountId.trim() || undefined,
+        selfSendNumber: form.selfSendNumber.trim() || undefined,
+        wpMediaId: form.wpMediaId.trim() || undefined,
       });
       if (updated) setSettings(updated);
     } catch (err) {
@@ -168,6 +181,68 @@ export default function SettingsPage() {
                   checked={form.selfInvoiceMessageEnabled}
                   onCheckedChange={(checked) => setForm({ ...form, selfInvoiceMessageEnabled: checked })}
                 />
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border p-4">
+                <Label htmlFor="wpToken" className="text-sm font-medium text-foreground">
+                  WhatsApp API Token
+                </Label>
+                <Input
+                  id="wpToken"
+                  type="password"
+                  value={form.wpToken}
+                  onChange={(e) => setForm({ ...form, wpToken: e.target.value })}
+                  placeholder="EAAXXX..."
+                  className="bg-background border-border text-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used to send WhatsApp messages. Stored in settings for runtime use.
+                </p>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border p-4">
+                <Label htmlFor="wpAccountId" className="text-sm font-medium text-foreground">
+                  WhatsApp Business Account ID
+                </Label>
+                <Input
+                  id="wpAccountId"
+                  value={form.wpAccountId}
+                  onChange={(e) => setForm({ ...form, wpAccountId: e.target.value })}
+                  placeholder="1080651450854191"
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border p-4">
+                <Label htmlFor="selfSendNumber" className="text-sm font-medium text-foreground">
+                  Self Invoice Number
+                </Label>
+                <Input
+                  id="selfSendNumber"
+                  value={form.selfSendNumber}
+                  onChange={(e) => setForm({ ...form, selfSendNumber: e.target.value })}
+                  placeholder="9876543210"
+                  className="bg-background border-border text-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Number that receives self invoice copy when enabled.
+                </p>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border p-4">
+                <Label htmlFor="wpMediaId" className="text-sm font-medium text-foreground">
+                  WhatsApp Header Media ID
+                </Label>
+                <Input
+                  id="wpMediaId"
+                  value={form.wpMediaId}
+                  onChange={(e) => setForm({ ...form, wpMediaId: e.target.value })}
+                  placeholder="1915798535743551"
+                  className="bg-background border-border text-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Media id used as marketing template header image when configured.
+                </p>
               </div>
 
               <Button type="submit" disabled={isSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">

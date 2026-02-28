@@ -17,9 +17,9 @@ export default function BranchesPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ name: '', address: '' });
+  const [formData, setFormData] = useState({ name: '', address: '', phoneNumber: '', whatsappNumberId: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState({ name: '', address: '' });
+  const [editData, setEditData] = useState({ name: '', address: '', phoneNumber: '', whatsappNumberId: '' });
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -53,7 +53,7 @@ export default function BranchesPage() {
       const created = await apiClient.createBranch(formData);
       if (created) {
         setBranches((prev) => [...prev, created]);
-        setFormData({ name: '', address: '' });
+        setFormData({ name: '', address: '', phoneNumber: '', whatsappNumberId: '' });
         setShowForm(false);
       }
     } catch (err) {
@@ -64,7 +64,7 @@ export default function BranchesPage() {
   };
 
   const handleUpdate = async (id: string) => {
-    if (!editData.name.trim() || !editData.address.trim()) return;
+    if (!editData.name.trim() || !editData.address.trim() || !editData.phoneNumber.trim() || !editData.whatsappNumberId.trim()) return;
     setIsSubmitting(true);
     setError(null);
     try {
@@ -128,6 +128,26 @@ export default function BranchesPage() {
                   className="bg-background border-border text-foreground"
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Phone Number *</label>
+                <Input
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  placeholder="10-15 digit branch phone"
+                  disabled={isSubmitting}
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">WhatsApp Number ID *</label>
+                <Input
+                  value={formData.whatsappNumberId}
+                  onChange={(e) => setFormData({ ...formData, whatsappNumberId: e.target.value })}
+                  placeholder="Meta WhatsApp sender number id"
+                  disabled={isSubmitting}
+                  className="bg-background border-border text-foreground"
+                />
+              </div>
               <div className="flex gap-3 pt-4">
                 <Button
                   type="button"
@@ -140,7 +160,13 @@ export default function BranchesPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !formData.name.trim() || !formData.address.trim()}
+                  disabled={
+                    isSubmitting
+                    || !formData.name.trim()
+                    || !formData.address.trim()
+                    || !formData.phoneNumber.trim()
+                    || !formData.whatsappNumberId.trim()
+                  }
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {isSubmitting ? 'Creating...' : 'Create'}
@@ -193,6 +219,18 @@ export default function BranchesPage() {
                         placeholder="Address"
                         className="bg-background border-border"
                       />
+                      <Input
+                        value={editData.phoneNumber}
+                        onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
+                        placeholder="Phone Number"
+                        className="bg-background border-border"
+                      />
+                      <Input
+                        value={editData.whatsappNumberId}
+                        onChange={(e) => setEditData({ ...editData, whatsappNumberId: e.target.value })}
+                        placeholder="WhatsApp Number ID"
+                        className="bg-background border-border"
+                      />
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -217,6 +255,8 @@ export default function BranchesPage() {
                       <div>
                         <p className="font-medium text-foreground">{b.name}</p>
                         <p className="text-sm text-muted-foreground">{b.address}</p>
+                        <p className="text-sm text-muted-foreground">Phone: {b.phoneNumber || '-'}</p>
+                        <p className="text-sm text-muted-foreground">WhatsApp ID: {b.whatsappNumberId || '-'}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {b.branchNumber} · {b.employeeCount} employees
                         </p>
@@ -226,7 +266,12 @@ export default function BranchesPage() {
                         variant="outline"
                         onClick={() => {
                           setEditingId(b._id);
-                          setEditData({ name: b.name, address: b.address });
+                          setEditData({
+                            name: b.name,
+                            address: b.address,
+                            phoneNumber: b.phoneNumber ?? '',
+                            whatsappNumberId: b.whatsappNumberId ?? '',
+                          });
                         }}
                         className="border-border text-foreground"
                       >
