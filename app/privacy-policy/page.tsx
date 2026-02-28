@@ -101,7 +101,7 @@ export default function PrivacyPolicyPage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">9. Contact</h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              Privacy contact: <a className="underline" href="mailto:privacy@blackbirdtattoo.com">privacy@blackbirdtattoo.com</a>
+              Privacy contact: <a className="underline" href="mailto:blackbirdtatto12@gmail.com">blackbirdtatto12@gmail.com</a>
             </p>
             <p className="text-sm leading-6 text-muted-foreground">
               Business: Blackbird Tattoo & Art Studio
