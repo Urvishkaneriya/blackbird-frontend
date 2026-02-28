@@ -115,6 +115,7 @@ export interface Settings {
   wpAccountId?: string;
   selfSendNumber?: string;
   wpMediaId?: string;
+  wpDefaultNumberId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -583,7 +584,7 @@ class ApiClient {
     payload: Partial<
       Pick<
         Settings,
-        'whatsappEnabled' | 'reminderEnabled' | 'reminderTimeDays' | 'selfInvoiceMessageEnabled' | 'wpToken' | 'wpAccountId' | 'selfSendNumber' | 'wpMediaId'
+        'whatsappEnabled' | 'reminderEnabled' | 'reminderTimeDays' | 'selfInvoiceMessageEnabled' | 'wpToken' | 'wpAccountId' | 'selfSendNumber' | 'wpMediaId' | 'wpDefaultNumberId'
       >
     >
   ): Promise<Settings | null> {

@@ -27,6 +27,7 @@ export default function SettingsPage() {
     wpAccountId: '',
     selfSendNumber: '',
     wpMediaId: '',
+    wpDefaultNumberId: '',
   });
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function SettingsPage() {
             wpAccountId: data.wpAccountId ?? '',
             selfSendNumber: data.selfSendNumber ?? '',
             wpMediaId: data.wpMediaId ?? '',
+            wpDefaultNumberId: data.wpDefaultNumberId ?? '',
           });
         }
       } catch (err) {
@@ -80,6 +82,7 @@ export default function SettingsPage() {
         wpAccountId: form.wpAccountId.trim() || undefined,
         selfSendNumber: form.selfSendNumber.trim() || undefined,
         wpMediaId: form.wpMediaId.trim() || undefined,
+        wpDefaultNumberId: form.wpDefaultNumberId.trim() || undefined,
       });
       if (updated) setSettings(updated);
     } catch (err) {
@@ -242,6 +245,22 @@ export default function SettingsPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Media id used as marketing template header image when configured.
+                </p>
+              </div>
+
+              <div className="space-y-2 rounded-lg border border-border p-4">
+                <Label htmlFor="wpDefaultNumberId" className="text-sm font-medium text-foreground">
+                  WhatsApp Default Sender Number ID
+                </Label>
+                <Input
+                  id="wpDefaultNumberId"
+                  value={form.wpDefaultNumberId}
+                  onChange={(e) => setForm({ ...form, wpDefaultNumberId: e.target.value })}
+                  placeholder="1020009854522750"
+                  className="bg-background border-border text-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Default sender number id used for all marketing sends.
                 </p>
               </div>
 
