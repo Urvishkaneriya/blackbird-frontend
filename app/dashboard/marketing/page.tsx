@@ -678,7 +678,7 @@ export default function MarketingPage() {
                         type="date"
                         value={sendForm.startDate}
                         onChange={(e) => setSendForm({ ...sendForm, startDate: e.target.value })}
-                        className="bg-background border-border text-foreground"
+                        className="date-input-theme bg-background border-border text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
@@ -687,7 +687,7 @@ export default function MarketingPage() {
                         type="date"
                         value={sendForm.endDate}
                         onChange={(e) => setSendForm({ ...sendForm, endDate: e.target.value })}
-                        className="bg-background border-border text-foreground"
+                        className="date-input-theme bg-background border-border text-foreground"
                       />
                     </div>
                   </div>
@@ -702,7 +702,7 @@ export default function MarketingPage() {
                       type="date"
                       value={sendForm.startDate}
                       onChange={(e) => setSendForm({ ...sendForm, startDate: e.target.value })}
-                      className="bg-background border-border text-foreground"
+                      className="date-input-theme bg-background border-border text-foreground"
                     />
                   </div>
                   <div className="space-y-2">
@@ -711,7 +711,7 @@ export default function MarketingPage() {
                       type="date"
                       value={sendForm.endDate}
                       onChange={(e) => setSendForm({ ...sendForm, endDate: e.target.value })}
-                      className="bg-background border-border text-foreground"
+                      className="date-input-theme bg-background border-border text-foreground"
                     />
                   </div>
                 </div>

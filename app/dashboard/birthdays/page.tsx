@@ -81,7 +81,7 @@ export default function BirthdaysPage() {
                 type="date"
                 value={queryDate}
                 onChange={(e) => setQueryDate(e.target.value)}
-                className="h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
               />
               <Button
                 variant="outline"

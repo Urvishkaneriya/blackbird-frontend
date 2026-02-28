@@ -338,7 +338,7 @@ export default function BookingsPage() {
                     value={formData.birthday}
                     onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                     disabled={isSubmitting}
-                    className="bg-background border-border text-foreground"
+                    className="date-input-theme bg-background border-border text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
@@ -580,14 +580,14 @@ export default function BookingsPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-                className="h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
               />
               <label className="text-sm text-muted-foreground">To</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-                className="h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
               />
             </div>
           </div>

@@ -145,7 +145,7 @@ export default function StaffPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="enter email address"
+                    placeholder="Enter email address"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -156,7 +156,7 @@ export default function StaffPage() {
                     type="tel"
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                    placeholder="enter mobile number"
+                    placeholder="Enter mobile number"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />

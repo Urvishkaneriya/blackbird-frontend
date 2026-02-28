@@ -15,13 +15,13 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/bblogolightmode.png',
+        url: '/logo_light.png',
         media: '(prefers-color-scheme: light)',
         sizes: '32x32',
         type: 'image/png',
       },
       {
-        url: '/bblogodarkmode.png',
+        url: '/logo_dark.png',
         media: '(prefers-color-scheme: dark)',
         sizes: '32x32',
         type: 'image/png',
@@ -29,21 +29,21 @@ export const metadata: Metadata = {
     ],
     shortcut: [
       {
-        url: '/bblogolightmode.png',
+        url: '/logo_light.png',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/bblogodarkmode.png',
+        url: '/logo_dark.png',
         media: '(prefers-color-scheme: dark)',
       },
     ],
     apple: [
       {
-        url: '/bblogolightmode.png',
+        url: '/logo_light.png',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/bblogodarkmode.png',
+        url: '/logo_dark.png',
         media: '(prefers-color-scheme: dark)',
       },
     ],

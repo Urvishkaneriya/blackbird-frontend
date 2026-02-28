@@ -219,14 +219,14 @@ export default function DashboardPage() {
                     type="date"
                     value={customStart}
                     onChange={(e) => setCustomStart(e.target.value)}
-                    className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                    className="date-input-theme h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
                   />
                   <span className="text-muted-foreground">to</span>
                   <input
                     type="date"
                     value={customEnd}
                     onChange={(e) => setCustomEnd(e.target.value)}
-                    className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                    className="date-input-theme h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
                   />
                 </div>
               )}
