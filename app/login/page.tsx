@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,7 @@ export default function LoginPage() {
                 <div className="relative">
                   <Input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
+                    placeholder="********"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="bg-background border-border text-foreground placeholder:text-muted-foreground pr-10"
@@ -100,12 +101,16 @@ export default function LoginPage() {
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-          
           </CardContent>
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          © 2024 Blackbird Tattoo & Art Studio. All rights reserved.
+          Copyright 2024 Blackbird Tattoo & Art Studio. All rights reserved.
+        </p>
+        <p className="text-center text-xs text-muted-foreground mt-2">
+          <Link href="/privacy-policy" className="underline hover:text-foreground">
+            Privacy Policy
+          </Link>
         </p>
       </div>
     </div>
