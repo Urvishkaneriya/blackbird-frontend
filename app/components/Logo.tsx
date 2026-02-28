@@ -11,10 +11,10 @@ export function BlackbirdLogo({ className = '' }: { className?: string }) {
       <Image
         src={lightLogo}
         alt="Blackbird logo"
-        width={110}
-        height={110}
+        width={105}
+        height={105}
         priority
-        className="block h-auto w-full max-w-[110px] object-contain dark:hidden"
+        className="block h-auto w-full max-w-[105px] object-contain dark:hidden"
       />
       <Image
         src={darkLogo}

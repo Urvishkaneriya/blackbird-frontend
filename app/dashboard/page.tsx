@@ -253,7 +253,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-foreground">Revenue by payment method</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full">
+                <div className="h-[300px] w-full">
                   {paymentChartData.length > 0 && paymentChartData.some((d) => d.value > 0) ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -286,7 +286,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-foreground">Revenue by payment mode</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full">
+                <div className="h-[300px] w-full">
                   {paymentModeChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={paymentModeChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
@@ -311,7 +311,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-foreground">Revenue by branch</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full">
+                <div className="h-[300px] w-full">
                   {branchChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={branchChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>

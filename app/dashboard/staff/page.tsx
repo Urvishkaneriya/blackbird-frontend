@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiClient, type Employee, type Branch } from '@/app/lib/api';
-import { Users } from 'lucide-react';
+import { Eye, EyeOff, Users } from 'lucide-react';
 
 export default function StaffPage() {
   const { user } = useAuth();
@@ -22,6 +22,7 @@ export default function StaffPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -133,7 +134,7 @@ export default function StaffPage() {
                     type="text"
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    placeholder="John Doe"
+                    placeholder="Enter staff full name"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -144,7 +145,7 @@ export default function StaffPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="john@blackbird.com"
+                    placeholder="enter email address"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
@@ -155,21 +156,32 @@ export default function StaffPage() {
                     type="tel"
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                    placeholder="1234567890"
+                    placeholder="enter mobile number"
                     disabled={isSubmitting}
                     className="bg-background border-border text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Password *</label>
-                  <Input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="••••••••"
-                    disabled={isSubmitting}
-                    className="bg-background border-border text-foreground"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="••••••••"
+                      disabled={isSubmitting}
+                      className="bg-background border-border text-foreground pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      disabled={isSubmitting}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-foreground">Branch *</label>

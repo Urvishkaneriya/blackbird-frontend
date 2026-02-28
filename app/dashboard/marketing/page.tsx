@@ -318,7 +318,7 @@ export default function MarketingPage() {
                       <Input
                         value={templateForm.name}
                         onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value.toUpperCase() })}
-                        placeholder="WELCOME_DISCOUNT"
+                        placeholder="Enter template name"
                         disabled={isSubmitting}
                         className="bg-background border-border text-foreground"
                       />
@@ -328,7 +328,7 @@ export default function MarketingPage() {
                       <Input
                         value={templateForm.displayName}
                         onChange={(e) => setTemplateForm({ ...templateForm, displayName: e.target.value })}
-                        placeholder="Welcome Discount Offer"
+                        placeholder="Enter display name"
                         disabled={isSubmitting}
                         className="bg-background border-border text-foreground"
                       />
@@ -338,7 +338,7 @@ export default function MarketingPage() {
                       <Input
                         value={templateForm.whatsappTemplateName}
                         onChange={(e) => setTemplateForm({ ...templateForm, whatsappTemplateName: e.target.value })}
-                        placeholder="blackbird_welcome_discount"
+                        placeholder="Enter WhatsApp template name"
                         disabled={isSubmitting}
                         className="bg-background border-border text-foreground"
                       />
@@ -348,7 +348,7 @@ export default function MarketingPage() {
                       <Input
                         value={templateForm.languageCode}
                         onChange={(e) => setTemplateForm({ ...templateForm, languageCode: e.target.value })}
-                        placeholder="en"
+                        placeholder="Enter language code (e.g. en, es)"
                         disabled={isSubmitting}
                         className="bg-background border-border text-foreground"
                       />
