@@ -28,6 +28,38 @@ function numberFromInput(value: string): number {
   return Number.isFinite(n) ? n : Number.NaN;
 }
 
+function parseBirthdayInput(value: string): string | null {
+  const trimmed = value.trim();
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
+  if (year < 1900 || year > 2100) return null;
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+function formatBirthdayInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
 function normalizeQuantityForProduct(product: Product | undefined, quantity: string): string {
   if (!product) return quantity;
   if (product.isDefault) return '1';
@@ -157,12 +189,17 @@ export default function BookingsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const size = formData.size.trim() ? Number(formData.size) : undefined;
+    const normalizedBirthday = parseBirthdayInput(formData.birthday);
     if (!effectiveBranchId) {
       setError(isAdmin ? 'Fill required fields correctly.' : 'Your branch is not set. Contact admin.');
       return;
     }
     if (!formData.fullName || !formData.phone || !formData.artistName || !formData.birthday) {
       setError('Please fill all required fields.');
+      return;
+    }
+    if (!normalizedBirthday) {
+      setError('Birthday must be in DD/MM/YYYY format.');
       return;
     }
     if (size !== undefined && (Number.isNaN(size) || size < 0)) {
@@ -216,7 +253,7 @@ export default function BookingsPage() {
     try {
       const created = await apiClient.createBooking({
         phone: formData.phone,
-        birthday: formData.birthday,
+        birthday: normalizedBirthday,
         fullName: formData.fullName,
         artistName: formData.artistName,
         branchId: effectiveBranchId,
@@ -338,11 +375,13 @@ export default function BookingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Birthday *</label>
                   <Input
-                    type="date"
+                    type="text"
                     value={formData.birthday}
-                    onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, birthday: formatBirthdayInput(e.target.value) })}
+                    placeholder="DD/MM/YYYY"
+                    inputMode="numeric"
                     disabled={isSubmitting}
-                    className="date-input-theme bg-background border-border text-foreground"
+                    className="bg-background border-border text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
