@@ -102,7 +102,7 @@ export default function BookingsPage() {
         }
         setFormData((f) => {
           if (f.items.length > 0 && f.items.some((it) => it.productId)) return f;
-          const defaultId = productList.find((p) => p.isDefault && p.isActive)?._id
+          const defaultId = productList.find((p) => p.isDefault)?._id
             ?? productList.find((p) => p.isActive)?._id
             ?? '';
           return { ...f, items: [makeEmptyLine(defaultId)] };
@@ -422,9 +422,11 @@ export default function BookingsPage() {
                               setLine(index, {
                                 productId: nextId,
                                 quantity: normalizeQuantityForProduct(nextProduct, line.quantity),
-                                unitPrice: nextProduct && !nextProduct.isDefault
-                                  ? String(nextProduct.basePrice)
-                                  : line.unitPrice,
+                                unitPrice: !nextProduct
+                                  ? line.unitPrice
+                                  : nextProduct.isDefault
+                                    ? (selected?.isDefault ? line.unitPrice : '')
+                                    : String(nextProduct.basePrice),
                               });
                             }}
                             disabled={isSubmitting || activeProducts.length === 0}
