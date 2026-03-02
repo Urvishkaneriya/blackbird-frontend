@@ -9,6 +9,7 @@ import { apiClient, type Booking, type Branch, type Product } from '@/app/lib/ap
 import { CalendarCheck, Plus, Trash2 } from 'lucide-react';
 
 const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+type DatePreset = 'today' | 'week' | 'month' | 'custom';
 
 type BookingLineForm = {
   productId: string;
@@ -60,6 +61,32 @@ function formatBirthdayInput(value: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
+function toLocalYMD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getPresetDateRange(preset: Exclude<DatePreset, 'custom'>): { start: string; end: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (preset === 'today') {
+    return { start: toLocalYMD(today), end: toLocalYMD(today) };
+  }
+  if (preset === 'week') {
+    const start = new Date(today);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return { start: toLocalYMD(start), end: toLocalYMD(end) };
+  }
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return { start: toLocalYMD(start), end: toLocalYMD(end) };
+}
+
 function normalizeQuantityForProduct(product: Product | undefined, quantity: string): string {
   if (!product) return quantity;
   if (product.isDefault) return '1';
@@ -75,10 +102,11 @@ export default function BookingsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit] = useState(10);
   const [branchFilter, setBranchFilter] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
+  const [startDate, setStartDate] = useState(() => getPresetDateRange('today').start);
+  const [endDate, setEndDate] = useState(() => getPresetDateRange('today').end);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -308,6 +336,13 @@ export default function BookingsPage() {
   };
 
   const canCreate = isAdmin || (user?.branchId && user.role === 'employee');
+  const applyDatePreset = (preset: Exclude<DatePreset, 'custom'>) => {
+    const range = getPresetDateRange(preset);
+    setDatePreset(preset);
+    setStartDate(range.start);
+    setEndDate(range.end);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -605,6 +640,42 @@ export default function BookingsPage() {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant={datePreset === 'today' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => applyDatePreset('today')}
+                className="capitalize"
+              >
+                Today
+              </Button>
+              <Button
+                type="button"
+                variant={datePreset === 'week' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => applyDatePreset('week')}
+                className="capitalize"
+              >
+                This week
+              </Button>
+              <Button
+                type="button"
+                variant={datePreset === 'month' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => applyDatePreset('month')}
+                className="capitalize"
+              >
+                This month
+              </Button>
+              <Button
+                type="button"
+                variant={datePreset === 'custom' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDatePreset('custom')}
+                className="capitalize"
+              >
+                Custom
+              </Button>
               {isAdmin && (
                 <>
                   <label className="text-sm text-muted-foreground">Branch</label>
@@ -620,20 +691,24 @@ export default function BookingsPage() {
                   </select>
                 </>
               )}
-              <label className="text-sm text-muted-foreground ml-0 sm:ml-2">From</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-                className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
-              />
-              <label className="text-sm text-muted-foreground">To</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-                className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
-              />
+              {datePreset === 'custom' && (
+                <>
+                  <label className="text-sm text-muted-foreground ml-0 sm:ml-2">From</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+                    className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                  />
+                  <label className="text-sm text-muted-foreground">To</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+                    className="date-input-theme h-9 px-3 rounded-md border border-border bg-background text-foreground text-sm"
+                  />
+                </>
+              )}
             </div>
           </div>
         </CardHeader>
