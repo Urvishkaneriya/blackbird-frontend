@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
-import { apiClient, type DashboardData, type BranchDashboardData } from '@/app/lib/api';
+import { apiClient, type DashboardData, type BranchDashboardData, type Booking } from '@/app/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -79,7 +79,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  const [datePreset, setDatePreset] = useState<DatePreset>('month');
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [dashboardData, setDashboardData] = useState<DashboardData | BranchDashboardData | null>(null);
@@ -109,137 +109,254 @@ export default function DashboardPage() {
 
   const handleDownloadExcel = async () => {
     if (!dashboardData) return;
+    try {
+      const { Workbook } = await import('exceljs');
+      const isBranchData = (d: DashboardData | BranchDashboardData): d is BranchDashboardData => 'branchInfo' in d;
+      const workbook = new Workbook();
+      workbook.creator = 'Blackbird Tattoo';
+      workbook.created = new Date();
 
-    const { Workbook } = await import('exceljs');
-    const isBranchData = (d: DashboardData | BranchDashboardData): d is BranchDashboardData => 'branchInfo' in d;
-    const workbook = new Workbook();
-    workbook.creator = 'Blackbird Tattoo';
-    workbook.created = new Date();
+      const sheet = workbook.addWorksheet('Dashboard Report', {
+        views: [{ state: 'frozen', ySplit: 3 }],
+      });
 
-    const sheet = workbook.addWorksheet('Dashboard Report', {
-      views: [{ state: 'frozen', ySplit: 3 }],
-    });
+      sheet.columns = [
+        { key: 'col1', width: 32 },
+        { key: 'col2', width: 22 },
+        { key: 'col3', width: 22 },
+        { key: 'col4', width: 26 },
+      ];
 
-    sheet.columns = [
-      { key: 'col1', width: 32 },
-      { key: 'col2', width: 22 },
-      { key: 'col3', width: 22 },
-      { key: 'col4', width: 26 },
-    ];
+      sheet.mergeCells('A1:D1');
+      sheet.getCell('A1').value = 'Blackbird Dashboard Report';
+      sheet.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF1F2937' } };
+      sheet.getCell('A1').alignment = { horizontal: 'left', vertical: 'middle' };
 
-    sheet.mergeCells('A1:D1');
-    sheet.getCell('A1').value = 'Blackbird Dashboard Report';
-    sheet.getCell('A1').font = { size: 16, bold: true, color: { argb: 'FF1F2937' } };
-    sheet.getCell('A1').alignment = { horizontal: 'left', vertical: 'middle' };
+      sheet.mergeCells('A2:D2');
+      sheet.getCell('A2').value = `Date Range: ${start} to ${end}`;
+      sheet.getCell('A2').font = { size: 11, color: { argb: 'FF6B7280' } };
+      sheet.getCell('A2').alignment = { horizontal: 'left', vertical: 'middle' };
 
-    sheet.mergeCells('A2:D2');
-    sheet.getCell('A2').value = `Date Range: ${start} to ${end}`;
-    sheet.getCell('A2').font = { size: 11, color: { argb: 'FF6B7280' } };
-    sheet.getCell('A2').alignment = { horizontal: 'left', vertical: 'middle' };
+      const sectionHeaderFill = {
+        type: 'pattern' as const,
+        pattern: 'solid' as const,
+        fgColor: { argb: 'FFF3F4F6' },
+      };
+      const tableHeaderFill = {
+        type: 'pattern' as const,
+        pattern: 'solid' as const,
+        fgColor: { argb: 'FFE5E7EB' },
+      };
+      const border = {
+        top: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+        left: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+        bottom: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+        right: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
+      };
 
-    const sectionHeaderFill = {
-      type: 'pattern' as const,
-      pattern: 'solid' as const,
-      fgColor: { argb: 'FFF3F4F6' },
-    };
-    const tableHeaderFill = {
-      type: 'pattern' as const,
-      pattern: 'solid' as const,
-      fgColor: { argb: 'FFE5E7EB' },
-    };
-    const border = {
-      top: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
-      left: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
-      bottom: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
-      right: { style: 'thin' as const, color: { argb: 'FFD1D5DB' } },
-    };
+      let rowIndex = 4;
 
-    let rowIndex = 4;
+      const addSectionTitle = (title: string) => {
+        sheet.mergeCells(`A${rowIndex}:D${rowIndex}`);
+        const cell = sheet.getCell(`A${rowIndex}`);
+        cell.value = title;
+        cell.font = { bold: true, size: 12, color: { argb: 'FF111827' } };
+        cell.fill = sectionHeaderFill;
+        cell.border = border;
+        rowIndex += 1;
+      };
 
-    const addSectionTitle = (title: string) => {
-      sheet.mergeCells(`A${rowIndex}:D${rowIndex}`);
-      const cell = sheet.getCell(`A${rowIndex}`);
-      cell.value = title;
-      cell.font = { bold: true, size: 12, color: { argb: 'FF111827' } };
-      cell.fill = sectionHeaderFill;
-      cell.border = border;
+      const addTableHeader = (headers: string[]) => {
+        const row = sheet.getRow(rowIndex);
+        row.values = headers;
+        row.eachCell((cell) => {
+          cell.font = { bold: true, color: { argb: 'FF111827' } };
+          cell.fill = tableHeaderFill;
+          cell.border = border;
+          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        });
+        rowIndex += 1;
+      };
+
+      const addDataRow = (values: Array<string | number | null>, formats?: Record<number, string>) => {
+        const row = sheet.getRow(rowIndex);
+        row.values = values;
+        row.eachCell((cell, colNumber) => {
+          cell.border = border;
+          cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 ? 'left' : 'right' };
+          if (formats?.[colNumber]) {
+            cell.numFmt = formats[colNumber];
+          }
+        });
+        rowIndex += 1;
+      };
+
+      const summary = dashboardData.summary;
+      addSectionTitle('Summary');
+      addTableHeader(['Metric', 'Value']);
+      addDataRow(['Total Bookings', summary.totalBookings], { 2: '#,##0' });
+      addDataRow(['Total Revenue', summary.totalRevenue], { 2: '#,##0.00' });
+      addDataRow(['Unique Customers', summary.uniqueCustomersInRange], { 2: '#,##0' });
+      addDataRow(['Average Order Value', summary.averageOrderValue], { 2: '#,##0.00' });
       rowIndex += 1;
-    };
 
-    const addTableHeader = (headers: string[]) => {
-      const row = sheet.getRow(rowIndex);
-      row.values = headers;
-      row.eachCell((cell) => {
+      if (!isBranchData(dashboardData) && dashboardData.byBranch?.length) {
+        addSectionTitle('By Branch');
+        addTableHeader(['Branch', 'Bookings', 'Revenue']);
+        dashboardData.byBranch.forEach((r) => {
+          addDataRow([r.branchName, r.bookingCount, r.revenue], { 2: '#,##0', 3: '#,##0.00' });
+        });
+        rowIndex += 1;
+      }
+
+      if (dashboardData.byPaymentMethod?.length) {
+        addSectionTitle('By Payment Method');
+        addTableHeader(['Method', 'Count', 'Total Amount']);
+        dashboardData.byPaymentMethod.forEach((r) => {
+          addDataRow([r.paymentMethod, r.count, r.totalAmount], { 2: '#,##0', 3: '#,##0.00' });
+        });
+        rowIndex += 1;
+      }
+
+      if (dashboardData.byPaymentMode?.length) {
+        addSectionTitle('By Payment Mode');
+        addTableHeader(['Mode', 'Count', 'Total Amount']);
+        dashboardData.byPaymentMode.forEach((r) => {
+          addDataRow([r.paymentMode, r.count, r.totalAmount], { 2: '#,##0', 3: '#,##0.00' });
+        });
+        rowIndex += 1;
+      }
+
+      if (dashboardData.topProducts?.length) {
+        addSectionTitle('Top Products');
+        addTableHeader(['Product', 'Quantity', 'Revenue']);
+        dashboardData.topProducts.forEach((r) => {
+          addDataRow([r.productName, r.quantity, r.revenue], { 2: '#,##0', 3: '#,##0.00' });
+        });
+      }
+
+      const bookings: Booking[] = [];
+      let fetchPage = 1;
+      const fetchLimit = 100;
+      while (true) {
+        const pageData = await apiClient.getBookings({
+          startDate: start,
+          endDate: end,
+          page: fetchPage,
+          limit: fetchLimit,
+        });
+        const pageBookings = pageData.bookings ?? [];
+        bookings.push(...pageBookings);
+        const totalBookings = pageData.total ?? bookings.length;
+        if (bookings.length >= totalBookings || pageBookings.length === 0) break;
+        fetchPage += 1;
+      }
+
+      let branchLookup = new Map<string, { name: string; branchNumber: string }>();
+      if (isAdmin) {
+        const branchList = await apiClient.getBranches();
+        branchLookup = new Map(
+          branchList.map((b) => [b._id, { name: b.name, branchNumber: b.branchNumber }])
+        );
+      }
+
+      const resolveBranch = (branch: Booking['branchId']): { name: string; number: string } => {
+        if (typeof branch === 'object' && branch !== null) {
+          return {
+            name: branch.name ?? '-',
+            number: branch.branchNumber ?? '-',
+          };
+        }
+        if (typeof branch === 'string') {
+          const lookup = branchLookup.get(branch);
+          if (lookup) return { name: lookup.name, number: lookup.branchNumber };
+        }
+        return { name: '-', number: '-' };
+      };
+
+      const getItemsLabel = (booking: Booking): string => {
+        if (!booking.items?.length) return '-';
+        return booking.items
+          .map((item) => {
+            const productName =
+              item.productName
+              || (typeof item.productId === 'object' && item.productId?.name)
+              || 'Item';
+            return `${productName} x${item.quantity}`;
+          })
+          .join(', ');
+      };
+
+      const getBookingTotal = (booking: Booking): number => booking.payment?.totalAmount ?? booking.amount ?? 0;
+      const normalizeDate = (value?: string): string => {
+        if (!value) return '-';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      };
+
+      const bookingsSheet = workbook.addWorksheet('Bookings', {
+        views: [{ state: 'frozen', ySplit: 1 }],
+      });
+      bookingsSheet.columns = [
+        { header: 'Booking #', key: 'bookingNumber', width: 14 },
+        { header: 'Customer Name', key: 'customerName', width: 24 },
+        { header: 'Phone', key: 'phone', width: 16 },
+        { header: 'Branch Name', key: 'branchName', width: 22 },
+        { header: 'Branch Number', key: 'branchNumber', width: 14 },
+        { header: 'Items', key: 'items', width: 50 },
+        { header: 'Total Amount', key: 'totalAmount', width: 14 },
+        { header: 'Payment Mode', key: 'paymentMode', width: 14 },
+        { header: 'Cash', key: 'cash', width: 12 },
+        { header: 'UPI', key: 'upi', width: 12 },
+        { header: 'Booking Date', key: 'bookingDate', width: 14 },
+      ];
+
+      bookingsSheet.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FF111827' } };
         cell.fill = tableHeaderFill;
         cell.border = border;
-        cell.alignment = { vertical: 'middle', horizontal: 'left' };
       });
-      rowIndex += 1;
-    };
 
-    const addDataRow = (values: Array<string | number | null>, formats?: Record<number, string>) => {
-      const row = sheet.getRow(rowIndex);
-      row.values = values;
-      row.eachCell((cell, colNumber) => {
-        cell.border = border;
-        cell.alignment = { vertical: 'middle', horizontal: colNumber === 1 ? 'left' : 'right' };
-        if (formats?.[colNumber]) {
-          cell.numFmt = formats[colNumber];
-        }
+      bookings.forEach((booking) => {
+        const branch = resolveBranch(booking.branchId);
+        const paymentMode = booking.payment?.paymentMode ?? booking.paymentMethod ?? '-';
+        const cash = booking.payment?.cashAmount ?? 0;
+        const upi = booking.payment?.upiAmount ?? 0;
+        bookingsSheet.addRow({
+          bookingNumber: booking.bookingNumber,
+          customerName: booking.fullName,
+          phone: booking.phone,
+          branchName: branch.name,
+          branchNumber: branch.number,
+          items: getItemsLabel(booking),
+          totalAmount: getBookingTotal(booking),
+          paymentMode,
+          cash,
+          upi,
+          bookingDate: normalizeDate(booking.date ?? booking.createdAt),
+        });
       });
-      rowIndex += 1;
-    };
 
-    const summary = dashboardData.summary;
-    addSectionTitle('Summary');
-    addTableHeader(['Metric', 'Value']);
-    addDataRow(['Total Bookings', summary.totalBookings], { 2: '#,##0' });
-    addDataRow(['Total Revenue', summary.totalRevenue], { 2: '#,##0.00' });
-    addDataRow(['Unique Customers', summary.uniqueCustomersInRange], { 2: '#,##0' });
-    addDataRow(['Average Order Value', summary.averageOrderValue], { 2: '#,##0.00' });
-    rowIndex += 1;
-
-    if (!isBranchData(dashboardData) && dashboardData.byBranch?.length) {
-      addSectionTitle('By Branch');
-      addTableHeader(['Branch', 'Bookings', 'Revenue']);
-      dashboardData.byBranch.forEach((r) => {
-        addDataRow([r.branchName, r.bookingCount, r.revenue], { 2: '#,##0', 3: '#,##0.00' });
+      bookingsSheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        row.eachCell((cell, colNumber) => {
+          cell.border = border;
+          cell.alignment = { vertical: 'top', horizontal: colNumber === 6 ? 'left' : 'left', wrapText: colNumber === 6 };
+          if (colNumber === 7 || colNumber === 9 || colNumber === 10) {
+            cell.numFmt = '#,##0.00';
+          }
+        });
       });
-      rowIndex += 1;
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      downloadBlob(blob, `dashboard-${start}-to-${end}.xlsx`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export Excel');
     }
-
-    if (dashboardData.byPaymentMethod?.length) {
-      addSectionTitle('By Payment Method');
-      addTableHeader(['Method', 'Count', 'Total Amount']);
-      dashboardData.byPaymentMethod.forEach((r) => {
-        addDataRow([r.paymentMethod, r.count, r.totalAmount], { 2: '#,##0', 3: '#,##0.00' });
-      });
-      rowIndex += 1;
-    }
-
-    if (dashboardData.byPaymentMode?.length) {
-      addSectionTitle('By Payment Mode');
-      addTableHeader(['Mode', 'Count', 'Total Amount']);
-      dashboardData.byPaymentMode.forEach((r) => {
-        addDataRow([r.paymentMode, r.count, r.totalAmount], { 2: '#,##0', 3: '#,##0.00' });
-      });
-      rowIndex += 1;
-    }
-
-    if (dashboardData.topProducts?.length) {
-      addSectionTitle('Top Products');
-      addTableHeader(['Product', 'Quantity', 'Revenue']);
-      dashboardData.topProducts.forEach((r) => {
-        addDataRow([r.productName, r.quantity, r.revenue], { 2: '#,##0', 3: '#,##0.00' });
-      });
-    }
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    downloadBlob(blob, `dashboard-${start}-to-${end}.xlsx`);
   };
 
   const summary = dashboardData?.summary ?? { totalBookings: 0, totalRevenue: 0, uniqueCustomersInRange: 0, averageOrderValue: 0 };
