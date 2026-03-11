@@ -334,7 +334,13 @@ export default function BookingsPage() {
     if (b.payment?.paymentMode !== 'SPLIT') return null;
     return `Cash ${INR.format(b.payment.cashAmount)} + UPI ${INR.format(b.payment.upiAmount)}`;
   };
-
+  const bookingDateLabel = (b: Booking) => {
+    const raw = b.date ?? b.createdAt;
+    if (!raw) return '-';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return String(raw);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
   const canCreate = isAdmin || (user?.branchId && user.role === 'employee');
   const applyDatePreset = (preset: Exclude<DatePreset, 'custom'>) => {
     const range = getPresetDateRange(preset);
@@ -736,6 +742,7 @@ export default function BookingsPage() {
                       <p className="text-muted-foreground">Phone: <span className="text-foreground">{b.phone}</span></p>
                       <p className="text-muted-foreground">Size: <span className="text-foreground">{b.size ?? '-'}</span></p>
                       <p className="text-muted-foreground">Artist: <span className="text-foreground">{b.artistName}</span></p>
+                      <p className="text-muted-foreground">Date: <span className="text-foreground">{bookingDateLabel(b)}</span></p>
                       <p className="text-muted-foreground">Payment: <span className="text-foreground">{bookingPaymentLabel(b)}</span></p>
                       {isAdmin && (
                         <p className="text-muted-foreground col-span-2">Branch: <span className="text-foreground">{branchName(b.branchId)}</span></p>
@@ -761,6 +768,7 @@ export default function BookingsPage() {
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Total</th>
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Size</th>
                     <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Artist</th>
+                    <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Date</th>
                     {isAdmin && (
                       <th className="text-left py-3 px-2 md:px-4 font-semibold text-foreground">Branch</th>
                     )}
@@ -779,6 +787,7 @@ export default function BookingsPage() {
                       <td className="py-3 px-2 md:px-4 text-foreground">INR {INR.format(bookingTotal(b))}</td>
                       <td className="py-3 px-2 md:px-4 text-foreground">{b.size ?? '-'}</td>
                       <td className="py-3 px-2 md:px-4 text-foreground">{b.artistName}</td>
+                      <td className="py-3 px-2 md:px-4 text-foreground text-xs">{bookingDateLabel(b)}</td>
                       {isAdmin && (
                         <td className="py-3 px-2 md:px-4 text-foreground text-xs">{branchName(b.branchId)}</td>
                       )}
@@ -827,3 +836,5 @@ export default function BookingsPage() {
     </div>
   );
 }
+
+
