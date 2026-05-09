@@ -302,6 +302,7 @@ export default function DashboardPage() {
         { header: 'Booking #', key: 'bookingNumber', width: 14 },
         { header: 'Customer Name', key: 'customerName', width: 24 },
         { header: 'Phone', key: 'phone', width: 16 },
+        { header: 'Artist', key: 'artistName', width: 20 },
         { header: 'Branch Name', key: 'branchName', width: 22 },
         { header: 'Branch Number', key: 'branchNumber', width: 14 },
         { header: 'Items', key: 'items', width: 50 },
@@ -327,6 +328,7 @@ export default function DashboardPage() {
           bookingNumber: booking.bookingNumber,
           customerName: booking.fullName,
           phone: booking.phone,
+          artistName: booking.artistName || '-',
           branchName: branch.name,
           branchNumber: branch.number,
           items: getItemsLabel(booking),
@@ -342,8 +344,8 @@ export default function DashboardPage() {
         if (rowNumber === 1) return;
         row.eachCell((cell, colNumber) => {
           cell.border = border;
-          cell.alignment = { vertical: 'top', horizontal: colNumber === 6 ? 'left' : 'left', wrapText: colNumber === 6 };
-          if (colNumber === 7 || colNumber === 9 || colNumber === 10) {
+          cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: colNumber === 7 };
+          if (colNumber === 8 || colNumber === 10 || colNumber === 11) {
             cell.numFmt = '#,##0.00';
           }
         });
